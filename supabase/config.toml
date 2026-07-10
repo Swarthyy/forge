@@ -1,0 +1,35 @@
+project_id = "forge"
+
+[api]
+enabled = true
+port = 54321
+
+[db]
+port = 54322
+
+[studio]
+enabled = true
+port = 54323
+
+[local_smtp]
+enabled = true
+port = 54324
+
+[auth]
+enabled = true
+site_url = "http://localhost:8081"
+
+[auth.email]
+enable_signup = true
+double_confirm_changes = false
+enable_confirmations = false
+
+[functions]
+[functions.submit-entry]
+verify_jwt = true
+
+[functions.grade-week]
+verify_jwt = false
+
+[functions.stakes-ante]
+verify_jwt = true

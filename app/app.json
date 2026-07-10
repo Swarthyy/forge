@@ -1,0 +1,24 @@
+{
+  "expo": {
+    "name": "Forge",
+    "slug": "forge",
+    "scheme": "forge",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0B0C10",
+    "plugins": ["expo-router"],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "dev.forge.app"
+    },
+    "android": {
+      "package": "dev.forge.app",
+      "backgroundColor": "#0B0C10"
+    },
+    "notification": {
+      "icon": "./assets/notification-icon.png",
+      "color": "#39FF14"
+    }
+  }
+}

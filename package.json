@@ -1,0 +1,15 @@
+{
+  "name": "forge",
+  "private": true,
+  "workspaces": [
+    "app",
+    "packages/*"
+  ],
+  "overrides": {
+    "@expo/vector-icons": "14.0.0"
+  },
+  "scripts": {
+    "dev": "npm run start --workspace=app",
+    "typecheck": "npm run typecheck --workspace=packages/shared && npm run typecheck --workspace=app"
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Expo (Metro bundler)",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 8081
+    },
+    {
+      "name": "Expo Web",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "web", "--workspace=app", "--", "--port", "19006"],
+      "port": 19006
+    },
+    {
+      "name": "Supabase (local stack: API/DB/Studio/Inbucket)",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["supabase", "start"],
+      "port": 54321
+    },
+    {
+      "name": "Supabase Edge Functions",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["supabase", "functions", "serve", "--env-file", ".env"],
+      "port": 54321
+    }
+  ]
+}
