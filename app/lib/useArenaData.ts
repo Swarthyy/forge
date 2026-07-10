@@ -12,7 +12,9 @@ export interface StandingRow {
 export interface ArenaData {
   groupId: string | null;
   groupName: string | null;
+  myUserId: string | null;
   potCents: number;
+  vaultCents: number;
   weekNumber: number | null;
   standings: StandingRow[];
   loading: boolean;
@@ -25,7 +27,9 @@ export function useArenaData(): ArenaData {
   const [data, setData] = useState<ArenaData>({
     groupId: null,
     groupName: null,
+    myUserId: null,
     potCents: 0,
+    vaultCents: 0,
     weekNumber: null,
     standings: [],
     loading: true,
@@ -53,17 +57,17 @@ export function useArenaData(): ArenaData {
       .limit(1)
       .single();
     if (!membership) {
-      setData((d) => ({ ...d, loading: false }));
+      setData((d) => ({ ...d, loading: false, myUserId: appUser.id }));
       return;
     }
 
     const { data: group } = await supabase
       .from("groups")
-      .select("id, name, pot_cents, current_week_number")
+      .select("id, name, pot_cents, vault_cents, current_week_number")
       .eq("id", membership.group_id)
       .single();
     if (!group) {
-      setData((d) => ({ ...d, loading: false }));
+      setData((d) => ({ ...d, loading: false, myUserId: appUser.id }));
       return;
     }
 
@@ -77,18 +81,29 @@ export function useArenaData(): ArenaData {
       .eq("week_number", priorWeek)
       .order("rank", { ascending: true });
 
-    const standings: StandingRow[] = (submissions ?? []).map((s: any, i: number) => ({
+    // Turbo badge = actually on a 2+ week win streak, not just "currently rank 1".
+    const { data: prevWeekWinner } = await supabase
+      .from("weekly_submissions")
+      .select("user_id")
+      .eq("group_id", group.id)
+      .eq("week_number", priorWeek - 1)
+      .eq("rank", 1)
+      .maybeSingle();
+
+    const standings: StandingRow[] = (submissions ?? []).map((s: any) => ({
       user_id: s.user_id,
       display_name: s.users?.display_name ?? "?",
       points: s.points,
       rank: s.rank,
-      is_turbo: i === 0 && s.rank === 1,
+      is_turbo: s.rank === 1 && !!prevWeekWinner && prevWeekWinner.user_id === s.user_id,
     }));
 
     setData({
       groupId: group.id,
       groupName: group.name,
+      myUserId: appUser.id,
       potCents: group.pot_cents,
+      vaultCents: group.vault_cents,
       weekNumber: priorWeek,
       standings,
       loading: false,

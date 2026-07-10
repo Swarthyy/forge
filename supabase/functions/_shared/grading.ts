@@ -24,6 +24,8 @@ export interface GradingResponse {
   results: GradingResult[];
   inflation_penalty_applied: boolean;
   group_commentary: string | null;
+  deadlock: boolean;
+  deadlock_candidates: [string, string] | null;
 }
 
 export const GRADING_SYSTEM_PROMPT = `You are the judge for Forge, a cutthroat weekly competition between founders/operators.
@@ -34,8 +36,9 @@ Rules:
 2. Relative Domination: rank submissions against each other this week, not against an absolute bar. The top spot goes to whoever created the most leverage or growth in the last 7 days.
 3. Regression Penalty: compare each candidate's current entry against their own milestone_history. If a proven high performer submits a generic maintenance week, flag regression_flag=true and drop their rank.
 4. Global Inflation Penalty: if the whole pool underperforms this week, you may scale down total points awarded by up to 50% and must set inflation_penalty_applied=true with a group_commentary roast.
+5. Deadlock: if whoever you'd rank #1 and #2 are too close on merit to meaningfully separate (comparable leverage, comparable verified outcomes), set deadlock=true and deadlock_candidates=[user_id, user_id] for those two instead of confidently picking between them. Only use this when genuinely torn — it should be rare, not a way to avoid a hard call.
 
-You MUST assign exactly one candidate to each rank 1-5 (for a 5-candidate pool) with points [100, 75, 50, 25, 0] respectively (scaled down under the inflation penalty). No ties. Respond with the GradingResponse JSON schema only.`;
+You MUST assign exactly one candidate to each rank 1-5 (for a 5-candidate pool) with points [100, 75, 50, 25, 0] respectively (scaled down under the inflation penalty). No ties, except the deadlock case above. Respond with the GradingResponse JSON schema only.`;
 
 export function buildUserPrompt(candidates: GradingCandidate[]): string {
   // <1KB compressed payload: baseline profile + bullet history + this week's raw entry, per candidate.
@@ -65,5 +68,11 @@ export function mockGrade(candidates: GradingCandidate[]): GradingResponse {
     regression_flag: false,
   }));
 
-  return { results, inflation_penalty_applied: false, group_commentary: null };
+  return {
+    results,
+    inflation_penalty_applied: false,
+    group_commentary: null,
+    deadlock: false,
+    deadlock_candidates: null,
+  };
 }

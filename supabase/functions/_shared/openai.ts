@@ -1,4 +1,4 @@
-import { GRADING_SYSTEM_PROMPT, buildUserPrompt, GradingCandidate, GradingResponse, mockGrade } from "../_shared/grading.ts";
+import { GRADING_SYSTEM_PROMPT, buildUserPrompt, GradingCandidate, GradingResponse, mockGrade } from "./grading.ts";
 
 const RESPONSE_SCHEMA = {
   name: "grading_response",
@@ -24,8 +24,15 @@ const RESPONSE_SCHEMA = {
       },
       inflation_penalty_applied: { type: "boolean" },
       group_commentary: { type: ["string", "null"] },
+      deadlock: { type: "boolean" },
+      deadlock_candidates: {
+        type: ["array", "null"],
+        items: { type: "string" },
+        minItems: 2,
+        maxItems: 2,
+      },
     },
-    required: ["results", "inflation_penalty_applied", "group_commentary"],
+    required: ["results", "inflation_penalty_applied", "group_commentary", "deadlock", "deadlock_candidates"],
   },
 } as const;
 

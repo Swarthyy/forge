@@ -29,3 +29,21 @@ export function anteStake(groupId: string, amountCents: number) {
     amount_cents: amountCents,
   });
 }
+
+export function submitTiebreaker(groupId: string, tiebreakerText?: string) {
+  return callFunction<{ resolved?: boolean; waiting?: boolean; winner_id?: string }>("resolve-deadlock", {
+    group_id: groupId,
+    tiebreaker_text: tiebreakerText,
+  });
+}
+
+export function triggerAudit(weeklySubmissionId: string, evidenceUrl: string) {
+  return callFunction<{ audit: unknown }>("trigger-audit", {
+    weekly_submission_id: weeklySubmissionId,
+    evidence_url: evidenceUrl,
+  });
+}
+
+export function castAuditVote(auditId: string, vote: boolean) {
+  return callFunction<{ audit: unknown; upheld?: boolean }>("audit-vote", { audit_id: auditId, vote });
+}

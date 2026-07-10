@@ -1,17 +1,18 @@
 -- Local dev seed: one 5-player ring with a sample completed week (Wk 1)
 -- and an in-progress week (Wk 2) so the Arena/Reveal screens have data to render.
 
--- Fake auth.users rows (local dev only — magic-link login still works against these emails
--- via the Supabase local Inbucket mail catcher).
+-- Fake auth.users rows (local dev only). Password for every seeded account is
+-- "forge2026!" — fine for local/dev fixtures, never reuse this pattern for
+-- real accounts.
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
   created_at, updated_at, confirmation_token, recovery_token, email_change_token_new, email_change
 ) values
-  ('00000000-0000-0000-0000-000000000000', '11111111-1111-1111-1111-111111111101', 'authenticated', 'authenticated', 'james@forge.dev', '', now(), now(), now(), '', '', '', ''),
-  ('00000000-0000-0000-0000-000000000000', '11111111-1111-1111-1111-111111111102', 'authenticated', 'authenticated', 'angus@forge.dev', '', now(), now(), now(), '', '', '', ''),
-  ('00000000-0000-0000-0000-000000000000', '11111111-1111-1111-1111-111111111103', 'authenticated', 'authenticated', 'joono@forge.dev', '', now(), now(), now(), '', '', '', ''),
-  ('00000000-0000-0000-0000-000000000000', '11111111-1111-1111-1111-111111111104', 'authenticated', 'authenticated', 'jett@forge.dev', '', now(), now(), now(), '', '', '', ''),
-  ('00000000-0000-0000-0000-000000000000', '11111111-1111-1111-1111-111111111105', 'authenticated', 'authenticated', 'noah@forge.dev', '', now(), now(), now(), '', '', '', '');
+  ('00000000-0000-0000-0000-000000000000', '11111111-1111-1111-1111-111111111101', 'authenticated', 'authenticated', 'james@forge.dev', crypt('forge2026!', gen_salt('bf')), now(), now(), now(), '', '', '', ''),
+  ('00000000-0000-0000-0000-000000000000', '11111111-1111-1111-1111-111111111102', 'authenticated', 'authenticated', 'angus@forge.dev', crypt('forge2026!', gen_salt('bf')), now(), now(), now(), '', '', '', ''),
+  ('00000000-0000-0000-0000-000000000000', '11111111-1111-1111-1111-111111111103', 'authenticated', 'authenticated', 'joono@forge.dev', crypt('forge2026!', gen_salt('bf')), now(), now(), now(), '', '', '', ''),
+  ('00000000-0000-0000-0000-000000000000', '11111111-1111-1111-1111-111111111104', 'authenticated', 'authenticated', 'jett@forge.dev', crypt('forge2026!', gen_salt('bf')), now(), now(), now(), '', '', '', ''),
+  ('00000000-0000-0000-0000-000000000000', '11111111-1111-1111-1111-111111111105', 'authenticated', 'authenticated', 'noah@forge.dev', crypt('forge2026!', gen_salt('bf')), now(), now(), now(), '', '', '', '');
 
 insert into users (id, auth_id, display_name, context_profile, lifetime_balance_cents, expo_push_token) values
   ('22222222-2222-2222-2222-222222222201', '11111111-1111-1111-1111-111111111101', 'JAMES', 'Musician brand manager. Runs artist deals and sponsorships, ~$18k/mo baseline revenue, small 2-person team.', 65000, null),

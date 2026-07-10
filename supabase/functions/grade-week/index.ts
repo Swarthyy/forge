@@ -1,17 +1,18 @@
-// Core weekly grading loop (PRD §1/§2). Triggered by cron Monday 8:00 AM.
-// For each group: assemble compressed context, grade via OpenAI (or mock),
-// write rank/points, append milestone snapshot bullet, transfer pot to the winner.
+// Core weekly grading loop (PRD §1/§2 + v1.1 Vulture Vault/Deadlock). Triggered
+// by cron Monday 8:00 AM. For each group: assemble compressed context, grade via
+// OpenAI (or mock), write rank/points, append milestone snapshot bullet, transfer
+// pot to the winner (net of any Vulture Vault seizure), or pause on deadlock.
 import { withCors, corsHeaders } from "../_shared/cors.ts";
 import { adminClient } from "../_shared/admin-client.ts";
 import { POINTS_BY_RANK, GradingCandidate } from "../_shared/grading.ts";
-import { gradeCandidates } from "./openai.ts";
+import { gradeCandidates } from "../_shared/openai.ts";
 import { sendPush } from "../_shared/push.ts";
-import { verdictTemplate } from "../_shared/notifications.ts";
+import { verdictTemplate, deadlockTemplate } from "../_shared/notifications.ts";
 
 async function gradeGroup(admin: ReturnType<typeof adminClient>, groupId: string) {
   const { data: group, error: groupErr } = await admin
     .from("groups")
-    .select("id, name, pot_cents, current_week_number")
+    .select("id, name, pot_cents, vault_cents, current_week_number")
     .eq("id", groupId)
     .single();
   if (groupErr || !group) throw new Error(`group ${groupId} not found`);
@@ -59,8 +60,19 @@ async function gradeGroup(admin: ReturnType<typeof adminClient>, groupId: string
 
   const graded = await gradeCandidates(candidates);
 
-  // Persist rank/points/commentary per submission.
+  // Any vault balance sitting from a prior seizure rolls into this week's pot
+  // before settlement, so seized money always finds its way back to the table.
+  const effectivePotCents = group.pot_cents + group.vault_cents;
+
+  const deferredUserIds = new Set(
+    graded.deadlock && graded.deadlock_candidates ? graded.deadlock_candidates : []
+  );
+
+  // Persist rank/points/commentary per submission — skip the two deadlocked
+  // finalists, whose rank/points are held open until resolve-deadlock settles them.
   for (const result of graded.results) {
+    if (deferredUserIds.has(result.user_id)) continue;
+
     const submission = submissions.find((s) => s.user_id === result.user_id);
     if (!submission) continue;
     const points = graded.inflation_penalty_applied
@@ -72,9 +84,7 @@ async function gradeGroup(admin: ReturnType<typeof adminClient>, groupId: string
       .update({ rank: result.rank, points, ai_commentary: result.commentary })
       .eq("id", submission.id);
 
-    // Append distilled bullet to the running milestone snapshot string.
     const priorText = snapshotsById.get(result.user_id) ?? "";
-    const displayName = usersById.get(result.user_id)?.display_name ?? "";
     const bullet = `- Wk ${weekNumber}: ${result.commentary} (Rank ${result.rank})`;
     const newText = priorText ? `${priorText}; ${bullet}` : bullet;
 
@@ -83,9 +93,48 @@ async function gradeGroup(admin: ReturnType<typeof adminClient>, groupId: string
       .upsert({ user_id: result.user_id, group_id: groupId, bulleted_text: newText, updated_at: new Date().toISOString() });
   }
 
-  // Winner-take-all pot transfer.
+  if (graded.deadlock && graded.deadlock_candidates) {
+    // Pause: #3-5 are settled above, #1/#2 wait on resolve-deadlock. The vault
+    // roll-in is banked into pot_cents now so resolve-deadlock doesn't need to
+    // re-derive it.
+    await admin
+      .from("groups")
+      .update({
+        pot_cents: effectivePotCents,
+        vault_cents: 0,
+        week_status: "deadlocked",
+        deadlock_finalist_ids: graded.deadlock_candidates,
+        deadlock_deadline: new Date(Date.now() + 60_000).toISOString(),
+        deadlock_inflation_penalty: graded.inflation_penalty_applied,
+      })
+      .eq("id", groupId);
+
+    const finalistNames = graded.deadlock_candidates.map(
+      (id) => usersById.get(id)?.display_name ?? "Unknown"
+    ) as [string, string];
+    const notif = deadlockTemplate({ finalistNames });
+    const pushMessages = (users ?? [])
+      .filter((u) => !!u.expo_push_token)
+      .map((u) => ({ to: u.expo_push_token as string, title: notif.title, body: notif.body }));
+    await sendPush(pushMessages);
+
+    return { group_id: groupId, week_number: weekNumber, status: "deadlocked", results: graded.results };
+  }
+
+  // Winner-take-all pot transfer, net of a Vulture Vault seizure when the AI
+  // flagged the whole pool as underperforming this week.
   const winner = graded.results.find((r) => r.rank === 1);
+  let seizedCents = 0;
   if (winner) {
+    let payoutCents = effectivePotCents;
+    if (graded.inflation_penalty_applied) {
+      seizedCents = Math.round(effectivePotCents * 0.3);
+      payoutCents = effectivePotCents - seizedCents;
+      await admin
+        .from("vulture_vault_events")
+        .insert({ group_id: groupId, week_number: weekNumber, seized_cents: seizedCents });
+    }
+
     const { data: winnerUser } = await admin
       .from("users")
       .select("id, display_name, lifetime_balance_cents, expo_push_token")
@@ -95,7 +144,7 @@ async function gradeGroup(admin: ReturnType<typeof adminClient>, groupId: string
     if (winnerUser) {
       await admin
         .from("users")
-        .update({ lifetime_balance_cents: winnerUser.lifetime_balance_cents + group.pot_cents })
+        .update({ lifetime_balance_cents: winnerUser.lifetime_balance_cents + payoutCents })
         .eq("id", winnerUser.id);
     }
 
@@ -103,7 +152,7 @@ async function gradeGroup(admin: ReturnType<typeof adminClient>, groupId: string
     const notif = verdictTemplate({
       weekNumber,
       winnerName: winnerUser?.display_name ?? "Unknown",
-      potDollars: group.pot_cents / 100,
+      potDollars: payoutCents / 100,
       regressedName: regressed ? usersById.get(regressed.user_id)?.display_name ?? null : null,
     });
 
@@ -113,10 +162,17 @@ async function gradeGroup(admin: ReturnType<typeof adminClient>, groupId: string
     await sendPush(pushMessages);
   }
 
-  // Reset the pot and roll the group to next week.
+  // Reset the pot, bank any freshly seized vault money, and roll to next week.
   await admin
     .from("groups")
-    .update({ pot_cents: 0, current_week_number: weekNumber + 1 })
+    .update({
+      pot_cents: 0,
+      vault_cents: seizedCents,
+      week_status: "open",
+      deadlock_finalist_ids: null,
+      deadlock_deadline: null,
+      current_week_number: weekNumber + 1,
+    })
     .eq("id", groupId);
 
   return { group_id: groupId, week_number: weekNumber, results: graded.results };

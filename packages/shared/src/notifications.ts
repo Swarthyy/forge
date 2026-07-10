@@ -1,10 +1,20 @@
-export type NotificationBeat = "activation" | "callout" | "verdict" | "speculation";
+export type NotificationBeat =
+  | "activation"
+  | "callout"
+  | "verdict"
+  | "speculation"
+  | "deadlock"
+  | "auditOpened"
+  | "auditResolved";
 
 export interface NotificationTemplateVars {
   activation: {};
   callout: { leaders: string; laggard: string; minutesRemaining: number };
   verdict: { weekNumber: number; winnerName: string; potDollars: number; regressedName: string | null };
   speculation: { raiserName: string; raiseDollars: number; totalStakeDollars: number };
+  deadlock: { finalistNames: [string, string] };
+  auditOpened: { accuserName: string; accusedName: string };
+  auditResolved: { accusedName: string; upheld: boolean };
 }
 
 export const NOTIFICATION_TEMPLATES: {
@@ -29,5 +39,19 @@ export const NOTIFICATION_TEMPLATES: {
     body: `${raiserName} just doubled down an additional $${raiseDollars.toFixed(0)}. Current Stakes: $${totalStakeDollars.toFixed(
       0
     )}. Tap to match or concede the pot.`,
+  }),
+  deadlock: ({ finalistNames }) => ({
+    title: "Deadlock",
+    body: `${finalistNames[0]} and ${finalistNames[1]} are too close to call. 60 seconds to submit one more piece of evidence before the judge decides.`,
+  }),
+  auditOpened: ({ accuserName, accusedName }) => ({
+    title: "BS Called",
+    body: `${accuserName} is disputing ${accusedName}'s ranking. You have 1 hour to vote.`,
+  }),
+  auditResolved: ({ accusedName, upheld }) => ({
+    title: "Audit Resolved",
+    body: upheld
+      ? `The group upheld the dispute. ${accusedName} drops a rank.`
+      : `The group dismissed the dispute against ${accusedName}. Ranking stands.`,
   }),
 };

@@ -1,21 +1,39 @@
 import { useState } from "react";
 import { View, Text, TextInput, Pressable, StyleSheet } from "react-native";
-import { signInWithMagicLink } from "@/lib/auth";
+import { signInWithPassword, signUpWithPassword } from "@/lib/auth";
 import { colors, spacing, radius } from "@/lib/theme";
 
-export default function LoginScreen() {
-  const [email, setEmail] = useState("");
-  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+type Mode = "login" | "signup";
 
-  async function handleSend() {
-    if (!email) return;
-    setStatus("sending");
+export default function LoginScreen() {
+  const [mode, setMode] = useState<Mode>("login");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [contextProfile, setContextProfile] = useState("");
+  const [status, setStatus] = useState<"idle" | "working" | "error">("idle");
+  const [errorMessage, setErrorMessage] = useState("");
+
+  const canSubmit =
+    email.trim() && password.trim() && (mode === "login" || (displayName.trim() && contextProfile.trim()));
+
+  async function handleSubmit() {
+    if (!canSubmit) return;
+    setStatus("working");
     try {
-      await signInWithMagicLink(email.trim());
-      setStatus("sent");
-    } catch {
+      if (mode === "login") {
+        await signInWithPassword(email.trim(), password);
+      } else {
+        await signUpWithPassword(email.trim(), password, displayName.trim(), contextProfile.trim());
+      }
+      // Successful sign-in/sign-up flips the session, and the root layout's
+      // redirect takes it from there.
+    } catch (err) {
       setStatus("error");
+      setErrorMessage((err as Error).message);
+      return;
     }
+    setStatus("idle");
   }
 
   return (
@@ -32,13 +50,48 @@ export default function LoginScreen() {
         value={email}
         onChangeText={setEmail}
       />
+      <TextInput
+        style={styles.input}
+        placeholder="Password"
+        placeholderTextColor={colors.textMuted}
+        secureTextEntry
+        value={password}
+        onChangeText={setPassword}
+      />
 
-      <Pressable style={styles.button} onPress={handleSend} disabled={status === "sending"}>
-        <Text style={styles.buttonText}>{status === "sending" ? "Sending..." : "Send magic link"}</Text>
+      {mode === "signup" && (
+        <>
+          <TextInput
+            style={styles.input}
+            placeholder="Display name (e.g. JAMES)"
+            placeholderTextColor={colors.textMuted}
+            value={displayName}
+            onChangeText={setDisplayName}
+          />
+          <TextInput
+            style={[styles.input, styles.multiline]}
+            placeholder="What are you building? Business, scale, baseline — this never changes once set."
+            placeholderTextColor={colors.textMuted}
+            multiline
+            value={contextProfile}
+            onChangeText={setContextProfile}
+          />
+        </>
+      )}
+
+      <Pressable style={[styles.button, !canSubmit && styles.buttonDisabled]} onPress={handleSubmit} disabled={!canSubmit || status === "working"}>
+        <Text style={styles.buttonText}>
+          {status === "working" ? "Working..." : mode === "login" ? "Log in" : "Create account"}
+        </Text>
       </Pressable>
 
-      {status === "sent" && <Text style={styles.status}>Check your email for the link.</Text>}
-      {status === "error" && <Text style={[styles.status, { color: colors.crimson }]}>Couldn't send that link. Try again.</Text>}
+      {status === "error" && <Text style={[styles.status, { color: colors.crimson }]}>{errorMessage}</Text>}
+
+      <Pressable onPress={() => setMode(mode === "login" ? "signup" : "login")} style={styles.toggle}>
+        <Text style={styles.toggleText}>
+          {mode === "login" ? "New here? Create an account" : "Already have an account? Log in"}
+        </Text>
+      </Pressable>
     </View>
   );
 }
@@ -74,12 +127,14 @@ const styles = StyleSheet.create({
     fontSize: 15,
     marginBottom: spacing.md,
   },
+  multiline: { minHeight: 80, textAlignVertical: "top" },
   button: {
     backgroundColor: colors.matrixGreen,
     borderRadius: radius.md,
     paddingVertical: spacing.md,
     alignItems: "center",
   },
+  buttonDisabled: { opacity: 0.35 },
   buttonText: {
     color: "#04340F",
     fontSize: 15,
@@ -91,4 +146,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: spacing.lg,
   },
+  toggle: { marginTop: spacing.xl, alignItems: "center" },
+  toggleText: { color: colors.textSecondary, fontSize: 13 },
 });

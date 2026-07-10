@@ -18,7 +18,15 @@ export default function StakesScreen() {
   function handleSlide(value: number) {
     const rounded = Math.round(value / STEP_DOLLARS) * STEP_DOLLARS;
     if (rounded !== amount) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      // Escalating haptic weight as the raise climbs, so the slider itself
+      // communicates how much is at stake rather than a flat tap every step.
+      const style =
+        rounded >= 150
+          ? Haptics.ImpactFeedbackStyle.Heavy
+          : rounded >= 50
+          ? Haptics.ImpactFeedbackStyle.Medium
+          : Haptics.ImpactFeedbackStyle.Light;
+      Haptics.impactAsync(style);
     }
     setAmount(rounded);
   }

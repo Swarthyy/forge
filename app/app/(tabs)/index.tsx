@@ -1,9 +1,12 @@
+import { useEffect } from "react";
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from "react-native";
+import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withTiming, Easing } from "react-native-reanimated";
 import { colors, spacing, radius } from "@/lib/theme";
 import { useArenaData } from "@/lib/useArenaData";
+import { RollingOdometer } from "@/components/RollingOdometer";
 
 export default function ArenaScreen() {
-  const { groupName, potCents, weekNumber, standings, loading } = useArenaData();
+  const { groupName, myUserId, potCents, vaultCents, weekNumber, standings, loading } = useArenaData();
 
   if (loading) {
     return (
@@ -13,26 +16,50 @@ export default function ArenaScreen() {
     );
   }
 
+  const myRow = standings.find((s) => s.user_id === myUserId);
+  const iAmLast = myRow?.rank === 5;
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.wordmark}>FORGE</Text>
-      {groupName && <Text style={styles.groupName}>{groupName}</Text>}
+    <View style={styles.root}>
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <Text style={styles.wordmark}>FORGE</Text>
+        {groupName && <Text style={styles.groupName}>{groupName}</Text>}
 
-      <View style={styles.potCard}>
-        <Text style={styles.potLabel}>WEEKLY LIVE POT</Text>
-        <Text style={styles.potValue}>${(potCents / 100).toFixed(2)}</Text>
-      </View>
+        <View style={styles.potCard}>
+          <Text style={styles.potLabel}>WEEKLY LIVE POT</Text>
+          <RollingOdometer cents={potCents} />
+          {vaultCents > 0 && (
+            <Text style={styles.vaultLine}>Vulture Vault holding ${(vaultCents / 100).toFixed(2)} — rolls in next week</Text>
+          )}
+        </View>
 
-      <Text style={styles.sectionLabel}>STANDINGS {weekNumber ? `· WK ${weekNumber}` : ""}</Text>
+        <Text style={styles.sectionLabel}>STANDINGS {weekNumber ? `· WK ${weekNumber}` : ""}</Text>
 
-      <View style={{ gap: spacing.md }}>
-        {standings.length === 0 && <Text style={styles.empty}>No submissions graded yet this week.</Text>}
-        {standings.map((s) => (
-          <StandingCard key={s.user_id} row={s} />
-        ))}
-      </View>
-    </ScrollView>
+        <View style={{ gap: spacing.md }}>
+          {standings.length === 0 && <Text style={styles.empty}>No submissions graded yet this week.</Text>}
+          {standings.map((s) => (
+            <StandingCard key={s.user_id} row={s} />
+          ))}
+        </View>
+      </ScrollView>
+
+      {iAmLast && <RedVignetteOverlay />}
+    </View>
   );
+}
+
+function RedVignetteOverlay() {
+  const pulse = useSharedValue(0);
+
+  useEffect(() => {
+    pulse.value = withRepeat(withTiming(1, { duration: 2200, easing: Easing.inOut(Easing.sin) }), -1, true);
+  }, []);
+
+  const style = useAnimatedStyle(() => ({
+    opacity: 0.5 + pulse.value * 0.5,
+  }));
+
+  return <Animated.View pointerEvents="none" style={[styles.vignette, style]} />;
 }
 
 function StandingCard({
@@ -43,14 +70,8 @@ function StandingCard({
   const isLast = row.rank === 5;
   const isFirst = row.rank === 1;
 
-  return (
-    <View
-      style={[
-        styles.card,
-        isFirst && styles.cardFirst,
-        isLast && styles.cardLast,
-      ]}
-    >
+  const card = (
+    <View style={[styles.card, isFirst && styles.cardFirst, isLast && styles.cardLast]}>
       <View style={styles.cardLeft}>
         <Text style={[styles.rank, isFirst && styles.rankFirst, isLast && styles.rankLast]}>{row.rank ?? "-"}</Text>
         <Text style={[styles.name, isLast && styles.nameLast]}>{row.display_name}</Text>
@@ -73,9 +94,31 @@ function StandingCard({
       </View>
     </View>
   );
+
+  return isFirst ? <Rank1Glow>{card}</Rank1Glow> : card;
+}
+
+function Rank1Glow({ children }: { children: React.ReactNode }) {
+  const pulse = useSharedValue(0);
+
+  useEffect(() => {
+    pulse.value = withRepeat(withTiming(1, { duration: 900, easing: Easing.inOut(Easing.sin) }), -1, true);
+  }, []);
+
+  const ringStyle = useAnimatedStyle(() => ({
+    opacity: 0.35 + pulse.value * 0.65,
+  }));
+
+  return (
+    <View style={styles.glowWrap}>
+      <Animated.View pointerEvents="none" style={[styles.glowRing, ringStyle]} />
+      {children}
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: colors.obsidian },
   container: { flex: 1, backgroundColor: colors.obsidian },
   center: { flex: 1, backgroundColor: colors.obsidian, justifyContent: "center", alignItems: "center" },
   content: { padding: spacing.lg, paddingTop: spacing.xxl },
@@ -103,9 +146,20 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(57,255,20,0.04)",
   },
   potLabel: { color: colors.textSecondary, fontSize: 11, letterSpacing: 1.5, marginBottom: spacing.sm },
-  potValue: { color: colors.matrixGreen, fontSize: 40, fontWeight: "600" },
+  vaultLine: { color: colors.textMuted, fontSize: 11, marginTop: spacing.sm },
   sectionLabel: { color: colors.textMuted, fontSize: 11, letterSpacing: 1.5, marginBottom: spacing.md },
   empty: { color: colors.textMuted, fontSize: 13 },
+  glowWrap: { position: "relative" },
+  glowRing: {
+    position: "absolute",
+    top: -3,
+    left: -3,
+    right: -3,
+    bottom: -3,
+    borderRadius: radius.md + 3,
+    borderWidth: 2,
+    borderColor: colors.matrixGreen,
+  },
   card: {
     flexDirection: "row",
     alignItems: "center",
@@ -139,4 +193,13 @@ const styles = StyleSheet.create({
   badgeText: { color: colors.matrixGreen, fontSize: 10, letterSpacing: 0.5 },
   badgeCrimson: { backgroundColor: "rgba(255,49,49,0.1)" },
   badgeTextCrimson: { color: colors.crimson },
+  vignette: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderWidth: 28,
+    borderColor: "rgba(255,49,49,0.14)",
+  },
 });

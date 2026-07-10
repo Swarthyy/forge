@@ -33,3 +33,12 @@ verify_jwt = false
 
 [functions.stakes-ante]
 verify_jwt = true
+
+[functions.resolve-deadlock]
+verify_jwt = true
+
+[functions.trigger-audit]
+verify_jwt = true
+
+[functions.audit-vote]
+verify_jwt = true
