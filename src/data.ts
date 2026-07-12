@@ -1,5 +1,8 @@
 export type RankDirection = "up" | "flat" | "down";
 export type PerformanceSignal = "elite" | "strong" | "slump" | "fraud-risk";
+export type WeeklyPhase = "aftermath" | "stakes" | "submission" | "reveal" | "audit";
+export type NotificationCategory = "Stakes" | "Submissions" | "Roasts" | "System" | "BS Audits";
+export type EventSeverity = "green" | "neutral" | "red" | "gold";
 export type BusinessLane =
   | "skool-members"
   | "agency-retainers"
@@ -32,6 +35,41 @@ export type ForgeState = {
   vultureTaxRate: number;
   bsAuditWindowHours: number;
   authenticatedUserId: string;
+  phase: WeeklyPhase;
+  phaseEndsAt: string;
+  revealStartsAt: string;
+  submissionOpensAt: string;
+  raiseMatchEndsAt: string;
+};
+
+export type NotificationItem = {
+  id: string;
+  category: NotificationCategory;
+  title: string;
+  time: string;
+  body: string;
+  unread: boolean;
+  severity: EventSeverity;
+  playerId?: string;
+};
+
+export type ActivityEvent = {
+  id: string;
+  playerId?: string;
+  actor: string;
+  event: string;
+  time: string;
+  severity: EventSeverity;
+};
+
+export type PotTransaction = {
+  id: string;
+  playerId?: string;
+  label: string;
+  amount: number;
+  status: "held" | "matched" | "pending" | "seized" | "projected";
+  direction: "in" | "out";
+  time: string;
 };
 
 export const forgeState: ForgeState = {
@@ -41,7 +79,12 @@ export const forgeState: ForgeState = {
   groupPerformance: "slump",
   vultureTaxRate: 0.3,
   bsAuditWindowHours: 2,
-  authenticatedUserId: "noah"
+  authenticatedUserId: "noah",
+  phase: "stakes",
+  phaseEndsAt: "Thu 11:59 PM",
+  revealStartsAt: "Mon 8:00 AM",
+  submissionOpensAt: "Sun 6:00 PM",
+  raiseMatchEndsAt: "Thu 4:00 PM"
 };
 
 export const weeklyPot = forgeState.weeklyPot;
@@ -161,35 +204,165 @@ export const players: Player[] = [
   }
 ];
 
-export const notifications = [
+export const activityFeed: ActivityEvent[] = [
   {
+    id: "evt-raise-james",
+    playerId: "james",
+    actor: "James",
+    event: "raised the pot by $150 and triggered match pressure.",
+    time: "2m ago",
+    severity: "green"
+  },
+  {
+    id: "evt-angus-match",
+    playerId: "angus",
+    actor: "Angus",
+    event: "matched the raise after closing a retainer upsell.",
+    time: "9m ago",
+    severity: "green"
+  },
+  {
+    id: "evt-vulture-risk",
+    actor: "Forge System",
+    event: "flagged group output as slump-risk. Vulture tax is armed.",
+    time: "31m ago",
+    severity: "red"
+  },
+  {
+    id: "evt-noah-drift",
+    playerId: "noah",
+    actor: "Noah",
+    event: "is still sitting in Rank #5 with DRIFT active.",
+    time: "1h ago",
+    severity: "red"
+  },
+  {
+    id: "evt-jett-members",
+    playerId: "jett",
+    actor: "Jett",
+    event: "logged 18 net-new $30/mo Skool members.",
+    time: "3h ago",
+    severity: "gold"
+  }
+];
+
+export const potLedger: PotTransaction[] = [
+  {
+    id: "pot-base",
+    label: "Base weekly buy-ins",
+    amount: 500,
+    status: "held",
+    direction: "in",
+    time: "Mon 9:00 AM"
+  },
+  {
+    id: "pot-james",
+    playerId: "james",
+    label: "James nuke raise",
+    amount: 150,
+    status: "held",
+    direction: "in",
+    time: "Thu 2:00 PM"
+  },
+  {
+    id: "pot-angus",
+    playerId: "angus",
+    label: "Angus matched raise",
+    amount: 150,
+    status: "matched",
+    direction: "in",
+    time: "Thu 2:11 PM"
+  },
+  {
+    id: "pot-vulture",
+    label: "Projected Vulture seizure",
+    amount: 195,
+    status: "seized",
+    direction: "out",
+    time: "Mon 8:00 AM"
+  }
+];
+
+export const notifications: NotificationItem[] = [
+  {
+    id: "notif-james-raised",
+    category: "Stakes",
     title: "Sunday Activation",
     time: "Sun 6:00 PM",
     body:
-      "The Forge is open. 6 hours remain to state your milestone. No liability weeks."
+      "The Forge is open. 6 hours remain to state your milestone. No liability weeks.",
+    unread: false,
+    severity: "neutral"
   },
   {
+    id: "notif-callout",
+    category: "Submissions",
     title: "Callout",
     time: "Sun 10:30 PM",
     body:
-      "James and Angus have submitted nuclear achievements. Noah has yet to produce shipped proof."
+      "James and Angus have submitted nuclear achievements. Noah has yet to produce shipped proof.",
+    unread: true,
+    severity: "red",
+    playerId: "noah"
   },
   {
+    id: "notif-verdict",
+    category: "Roasts",
     title: "Verdict",
     time: "Mon 8:00 AM",
     body:
-      "Week 3 cleared. James dominates the arena. Vulture Protocol is active due to group slump."
+      "Week 3 cleared. James dominates the arena. Vulture Protocol is active due to group slump.",
+    unread: true,
+    severity: "gold",
+    playerId: "james"
   },
   {
+    id: "notif-raise",
+    category: "Stakes",
     title: "Speculation Trigger",
     time: "Thu 2:00 PM",
     body:
-      "James doubled down an additional $150. Match exposure or concede the pot."
+      "James doubled down an additional $150. Match exposure or concede the pot.",
+    unread: true,
+    severity: "green",
+    playerId: "james"
   },
   {
+    id: "notif-audit",
+    category: "BS Audits",
     title: "Audit Window",
     time: "Mon 8:15 AM",
     body:
-      "BS Button is live for 2 hours. Majority vote forces screenshot or asset verification."
+      "BS Button is live for 2 hours. Majority vote forces screenshot or asset verification.",
+    unread: true,
+    severity: "red"
+  },
+  {
+    id: "notif-angus-match",
+    category: "Stakes",
+    title: "Angus Matched",
+    time: "Thu 2:11 PM",
+    body: "Angus matched the $150 raise. The table is no longer decorative.",
+    unread: true,
+    severity: "green",
+    playerId: "angus"
+  },
+  {
+    id: "notif-submission-opens",
+    category: "System",
+    title: "Portal Opens Soon",
+    time: "Sun 4:00 PM",
+    body: "Sunday Portal opens in 2 hours. Outcome claims only. Diary entries get buried.",
+    unread: false,
+    severity: "neutral"
+  },
+  {
+    id: "notif-vulture-risk",
+    category: "System",
+    title: "Vulture Risk",
+    time: "Sat 6:00 PM",
+    body: "Group output is trending weak. Vulture Protocol may seize 30% of the pot.",
+    unread: true,
+    severity: "red"
   }
 ];

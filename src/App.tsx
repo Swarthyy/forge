@@ -1,17 +1,22 @@
 import { useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
+  Bell,
+  CheckCheck,
   ChevronRight,
   Crown,
+  DollarSign,
   Eye,
   Flame,
   Gauge,
+  Inbox as InboxIcon,
   Radio,
   ShieldAlert,
   Skull,
   Swords,
   Trophy,
   Vault,
+  X,
   Zap
 } from "lucide-react";
 import {
@@ -20,17 +25,41 @@ import {
   judgePrompt,
   judgeWeeklyPool
 } from "./aiJudge";
-import { forgeState, notifications, players, weeklyPot, type Player } from "./data";
+import {
+  activityFeed,
+  forgeState,
+  notifications,
+  players,
+  weeklyPot,
+  type ActivityEvent,
+  type NotificationCategory,
+  type NotificationItem,
+  type Player
+} from "./data";
 
-type View = "arena" | "stakes" | "submit" | "reveal" | "system";
+type View = "arena" | "stakes" | "submit" | "reveal" | "inbox";
 
-const views: Array<{ id: View; label: string }> = [
+const viewLabels: Array<{ id: View; label: string }> = [
   { id: "arena", label: "Arena" },
   { id: "stakes", label: "Stakes" },
   { id: "submit", label: "Sunday" },
   { id: "reveal", label: "Reveal" },
-  { id: "system", label: "System" }
+  { id: "inbox", label: "Inbox" }
 ];
+
+const views: Array<{ id: View; label: string; icon: typeof Swords }> = viewLabels.map((item) => ({
+  ...item,
+  icon:
+    item.id === "arena"
+      ? Swords
+      : item.id === "stakes"
+        ? DollarSign
+        : item.id === "submit"
+          ? Flame
+          : item.id === "reveal"
+            ? Crown
+            : InboxIcon
+}));
 
 function haptic(pattern: number | number[] = 12) {
   if ("vibrate" in navigator) {
@@ -42,10 +71,25 @@ export function App() {
   const [view, setView] = useState<View>("arena");
   const [raise, setRaise] = useState(150);
   const [submission, setSubmission] = useState("");
+  const [inboxItems, setInboxItems] = useState<NotificationItem[]>(notifications);
+  const [selectedNotification, setSelectedNotification] = useState<NotificationItem | null>(null);
   const judged = useMemo(() => judgeWeeklyPool(players), []);
   const vulture = useMemo(() => calculateVultureProtocol(forgeState), []);
   const authedPlayer = players.find((player) => player.id === forgeState.authenticatedUserId);
   const isBasementUser = authedPlayer?.rank === 5;
+  const unreadCount = inboxItems.filter((item) => item.unread).length;
+  const centerActionLabel = forgeState.phase === "submission" ? "Submit" : "Nuke";
+  const centerActionView: View = forgeState.phase === "submission" ? "submit" : "stakes";
+
+  const openNotification = (item: NotificationItem) => {
+    haptic(8);
+    setInboxItems((current) =>
+      current.map((notification) =>
+        notification.id === item.id ? { ...notification, unread: false } : notification
+      )
+    );
+    setSelectedNotification({ ...item, unread: false });
+  };
 
   return (
     <main className={`app-shell ${isBasementUser ? "basement-active" : ""}`}>
@@ -59,26 +103,30 @@ export function App() {
             <p className="eyebrow">Private Ring - Week {forgeState.weekId}</p>
             <h1>FORGE</h1>
           </div>
-          <div className="live-pill">
-            <Radio size={14} />
-            Live
+          <div className="topbar-actions">
+            <button
+              className="icon-button notification-button"
+              aria-label={`Open inbox${unreadCount ? `, ${unreadCount} unread` : ""}`}
+              onClick={() => {
+                haptic(8);
+                setView("inbox");
+              }}
+            >
+              <Bell size={18} />
+              {unreadCount > 0 && <span className="unread-badge">{unreadCount}</span>}
+            </button>
+            <div className="live-pill">
+              <Radio size={14} />
+              Live
+            </div>
           </div>
         </header>
 
-        <nav className="tabs" aria-label="Forge views">
-          {views.map((item) => (
-            <button
-              key={item.id}
-              className={view === item.id ? "active" : ""}
-              onClick={() => {
-                haptic(8);
-                setView(item.id);
-              }}
-            >
-              {item.label}
-            </button>
-          ))}
-        </nav>
+        <div className="phase-strip">
+          <span className="phase-dot" />
+          {forgeState.phase} phase
+          <span className="phase-deadline">Ends {forgeState.phaseEndsAt}</span>
+        </div>
 
         {view === "arena" && <Arena players={players} vulture={vulture} />}
         {view === "stakes" && (
@@ -88,8 +136,74 @@ export function App() {
           <SundayPortal submission={submission} setSubmission={setSubmission} />
         )}
         {view === "reveal" && <Reveal judged={judged} vulture={vulture} />}
-        {view === "system" && <SystemSpec />}
+        {view === "inbox" && (
+          <Inbox
+            items={inboxItems}
+            onOpen={openNotification}
+            onMarkAllRead={() => {
+              haptic(12);
+              setInboxItems((current) => current.map((item) => ({ ...item, unread: false })));
+            }}
+          />
+        )}
+
+        <nav className="bottom-tabs" aria-label="Forge primary navigation">
+          {views.map((item) => {
+            const Icon = item.icon;
+            const isCenter = item.id === "submit";
+            const targetView = isCenter ? centerActionView : item.id;
+            const label = isCenter ? centerActionLabel : item.label;
+            return (
+              <button
+                key={item.id}
+                className={`${view === targetView ? "active" : ""} ${isCenter ? "center-tab" : ""}`}
+                aria-label={label}
+                onClick={() => {
+                  haptic(isCenter ? [14, 30, 14] : 8);
+                  setView(targetView);
+                }}
+              >
+                <span className="tab-icon"><Icon size={isCenter ? 21 : 17} /></span>
+                <span>{label}</span>
+                {item.id === "inbox" && unreadCount > 0 && (
+                  <span className="tab-unread-dot" aria-label={`${unreadCount} unread`} />
+                )}
+              </button>
+            );
+          })}
+        </nav>
       </section>
+
+      {selectedNotification && (
+        <div className="sheet-backdrop" onClick={() => setSelectedNotification(null)}>
+          <section
+            className="detail-sheet"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="notification-detail-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="sheet-handle" />
+            <div className="sheet-heading">
+              <div>
+                <span className={`category-label ${selectedNotification.severity}`}>
+                  {selectedNotification.category}
+                </span>
+                <h2 id="notification-detail-title">{selectedNotification.title}</h2>
+              </div>
+              <button
+                className="icon-button"
+                aria-label="Close notification detail"
+                onClick={() => setSelectedNotification(null)}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <p>{selectedNotification.body}</p>
+            <span className="sheet-time">Received {selectedNotification.time}</span>
+          </section>
+        </div>
+      )}
     </main>
   );
 }
@@ -137,6 +251,109 @@ function Arena({
               <PlayerCard key={player.id} player={player} />
             ))}
         </div>
+      </section>
+
+      <ActivityFeed />
+    </div>
+  );
+}
+
+function ActivityFeed() {
+  return (
+    <section>
+      <div className="section-title activity-heading">
+        <Radio size={18} />
+        <h2>Live Activity</h2>
+        <span className="new-pulse">New</span>
+      </div>
+      <div className="activity-feed">
+        {activityFeed.map((item) => (
+          <article key={item.id} className={`activity-row ${item.severity}`}>
+            <div className="activity-avatar">{item.actor.slice(0, 1)}</div>
+            <div>
+              <p><strong>{item.actor}</strong> {item.event}</p>
+              <span>{item.time}</span>
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function Inbox({
+  items,
+  onOpen,
+  onMarkAllRead
+}: {
+  items: NotificationItem[];
+  onOpen: (item: NotificationItem) => void;
+  onMarkAllRead: () => void;
+}) {
+  const [filter, setFilter] = useState<NotificationCategory | "All">("All");
+  const categories: Array<NotificationCategory | "All"> = [
+    "All",
+    "Stakes",
+    "Submissions",
+    "Roasts",
+    "System",
+    "BS Audits"
+  ];
+  const filtered = filter === "All" ? items : items.filter((item) => item.category === filter);
+
+  return (
+    <div className="view stack inbox-view">
+      <section className="inbox-hero">
+        <div>
+          <p className="eyebrow">Private ring communications</p>
+          <h2>Inbox</h2>
+          <span>{items.filter((item) => item.unread).length} unread alerts</span>
+        </div>
+        <button className="text-button" onClick={onMarkAllRead}>
+          <CheckCheck size={16} /> Mark all read
+        </button>
+      </section>
+
+      <div className="category-scroller" aria-label="Notification categories">
+        {categories.map((category) => (
+          <button
+            key={category}
+            className={filter === category ? "active" : ""}
+            onClick={() => {
+              haptic(6);
+              setFilter(category);
+            }}
+          >
+            {category}
+          </button>
+        ))}
+      </div>
+
+      <section className="inbox-list" aria-live="polite">
+        {filtered.length === 0 ? (
+          <div className="empty-state">
+            <InboxIcon size={24} />
+            <strong>No alerts here.</strong>
+            <span>The room is quiet. For now.</span>
+          </div>
+        ) : (
+          filtered.map((item) => (
+            <button
+              key={item.id}
+              className={`notification-row ${item.unread ? "unread" : ""}`}
+              onClick={() => onOpen(item)}
+            >
+              <span className={`notification-severity ${item.severity}`} />
+              <span className="notification-copy">
+                <span className="notification-meta">{item.category} · {item.time}</span>
+                <strong>{item.title}</strong>
+                <span>{item.body}</span>
+              </span>
+              {item.unread && <span className="unread-dot" aria-label="Unread" />}
+              <ChevronRight size={16} />
+            </button>
+          ))
+        )}
       </section>
     </div>
   );
