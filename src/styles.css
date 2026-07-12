@@ -1401,6 +1401,31 @@ body {
   line-height: 1;
 }
 
+.hero-countdown {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 27px;
+  margin-top: 3px;
+  padding: 3px 9px;
+  border: 1px solid rgba(57, 255, 20, 0.16);
+  border-radius: 999px;
+  color: rgba(245, 255, 242, 0.46);
+  background: rgba(57, 255, 20, 0.055);
+  font-size: 9px;
+}
+
+.hero-countdown svg {
+  flex: 0 0 auto;
+  color: #39ff14;
+}
+
+.hero-countdown strong {
+  color: #39ff14;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.03em;
+}
+
 .hero-pot-card p {
   margin: 3px 0 8px;
   color: rgba(245, 255, 242, 0.43);

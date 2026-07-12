@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Bell,
   Check,
@@ -15,6 +15,7 @@ import {
   ShieldAlert,
   Skull,
   Swords,
+  Timer,
   UserRound,
   Vault,
   WalletCards,
@@ -31,6 +32,26 @@ import {
 
 type MainView = "arena" | "submit" | "reveal" | "inbox";
 
+function nextSundayPrompt(now: Date) {
+  const target = new Date(now);
+  const daysUntilSunday = (7 - target.getDay()) % 7;
+  target.setDate(target.getDate() + daysUntilSunday);
+  target.setHours(18, 0, 0, 0);
+
+  if (target.getTime() <= now.getTime()) target.setDate(target.getDate() + 7);
+  return target;
+}
+
+function formatCountdown(milliseconds: number) {
+  const totalSeconds = Math.max(0, Math.floor(milliseconds / 1000));
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  return `${days}d ${String(hours).padStart(2, "0")}h ${String(minutes).padStart(2, "0")}m ${String(seconds).padStart(2, "0")}s`;
+}
+
 function haptic(pattern: number | number[] = 12) {
   if ("vibrate" in navigator) navigator.vibrate(pattern);
 }
@@ -45,8 +66,15 @@ export function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [inboxItems, setInboxItems] = useState<NotificationItem[]>(notifications);
   const [selectedNotification, setSelectedNotification] = useState<NotificationItem | null>(null);
+  const [now, setNow] = useState(() => new Date());
   const judged = useMemo(() => judgeWeeklyPool(players), []);
   const vulture = useMemo(() => calculateVultureProtocol(forgeState), []);
+  const countdown = formatCountdown(nextSundayPrompt(now).getTime() - now.getTime());
+
+  useEffect(() => {
+    const interval = window.setInterval(() => setNow(new Date()), 1000);
+    return () => window.clearInterval(interval);
+  }, []);
 
   const openNotification = (item: NotificationItem) => {
     haptic(8);
@@ -65,8 +93,9 @@ export function App() {
 
       <section className="phone-frame">
         {view === "arena" && (
-          <Arena
+            <Arena
             vulture={vulture}
+            countdown={countdown}
             onOpenStakes={() => {
               haptic(10);
               setShowStakes(true);
@@ -172,11 +201,13 @@ function CompactHeader({
 
 function Arena({
   vulture,
+  countdown,
   onOpenStakes,
   onOpenVault,
   onOpenSettings
 }: {
   vulture: ReturnType<typeof calculateVultureProtocol>;
+  countdown: string;
   onOpenStakes: () => void;
   onOpenVault: () => void;
   onOpenSettings: () => void;
@@ -207,6 +238,10 @@ function Arena({
               {char}
             </span>
           ))}
+        </div>
+        <div className="hero-countdown" aria-label={`${countdown} until the Sunday achievement prompt`}>
+          <Timer size={14} />
+          <span><strong>{countdown}</strong> until your greatest achievement prompt</span>
         </div>
         <p>Winner-take-all · Monday 8:00 AM verdict</p>
         <button className="stakes-link" onClick={onOpenStakes}>
