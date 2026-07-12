@@ -1,85 +1,52 @@
 import { useMemo, useRef, useState } from "react";
 import {
-  AlertTriangle,
   Bell,
-  CheckCheck,
+  Check,
   ChevronRight,
+  CircleCheck,
   Crown,
-  DollarSign,
-  Eye,
-  Flame,
   Gauge,
+  History,
   Inbox as InboxIcon,
+  LockKeyhole,
+  Medal,
   Radio,
+  Settings,
   ShieldAlert,
   Skull,
   Swords,
-  Trophy,
+  UserRound,
   Vault,
-  X,
-  Zap
+  WalletCards,
+  X
 } from "lucide-react";
+import { calculateVultureProtocol, judgeWeeklyPool } from "./aiJudge";
 import {
-  calculateVultureProtocol,
-  judgeEndpointContract,
-  judgePrompt,
-  judgeWeeklyPool
-} from "./aiJudge";
-import {
-  activityFeed,
   forgeState,
   notifications,
   players,
-  weeklyPot,
-  type ActivityEvent,
-  type NotificationCategory,
   type NotificationItem,
   type Player
 } from "./data";
 
-type View = "arena" | "stakes" | "submit" | "reveal" | "inbox";
-
-const viewLabels: Array<{ id: View; label: string }> = [
-  { id: "arena", label: "Arena" },
-  { id: "stakes", label: "Stakes" },
-  { id: "submit", label: "Sunday" },
-  { id: "reveal", label: "Reveal" },
-  { id: "inbox", label: "Inbox" }
-];
-
-const views: Array<{ id: View; label: string; icon: typeof Swords }> = viewLabels.map((item) => ({
-  ...item,
-  icon:
-    item.id === "arena"
-      ? Swords
-      : item.id === "stakes"
-        ? DollarSign
-        : item.id === "submit"
-          ? Flame
-          : item.id === "reveal"
-            ? Crown
-            : InboxIcon
-}));
+type MainView = "arena" | "submit" | "reveal" | "inbox";
 
 function haptic(pattern: number | number[] = 12) {
-  if ("vibrate" in navigator) {
-    navigator.vibrate(pattern);
-  }
+  if ("vibrate" in navigator) navigator.vibrate(pattern);
 }
 
 export function App() {
-  const [view, setView] = useState<View>("arena");
-  const [raise, setRaise] = useState(150);
+  const [view, setView] = useState<MainView>(
+    forgeState.phase === "submission" ? "submit" : "arena"
+  );
   const [submission, setSubmission] = useState("");
+  const [showStakes, setShowStakes] = useState(false);
+  const [showVault, setShowVault] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [inboxItems, setInboxItems] = useState<NotificationItem[]>(notifications);
   const [selectedNotification, setSelectedNotification] = useState<NotificationItem | null>(null);
   const judged = useMemo(() => judgeWeeklyPool(players), []);
   const vulture = useMemo(() => calculateVultureProtocol(forgeState), []);
-  const authedPlayer = players.find((player) => player.id === forgeState.authenticatedUserId);
-  const isBasementUser = authedPlayer?.rank === 5;
-  const unreadCount = inboxItems.filter((item) => item.unread).length;
-  const centerActionLabel = forgeState.phase === "submission" ? "Submit" : "Nuke";
-  const centerActionView: View = forgeState.phase === "submission" ? "submit" : "stakes";
 
   const openNotification = (item: NotificationItem) => {
     haptic(8);
@@ -92,87 +59,59 @@ export function App() {
   };
 
   return (
-    <main className={`app-shell ${isBasementUser ? "basement-active" : ""}`}>
+    <main className="app-shell">
       <div className="ambient ambient-green" />
       <div className="ambient ambient-red" />
-      {isBasementUser && <div className="punishment-overlay" />}
 
       <section className="phone-frame">
-        <header className="topbar">
-          <div>
-            <p className="eyebrow">Private Ring - Week {forgeState.weekId}</p>
-            <h1>FORGE</h1>
-          </div>
-          <div className="topbar-actions">
-            <button
-              className="icon-button notification-button"
-              aria-label={`Open inbox${unreadCount ? `, ${unreadCount} unread` : ""}`}
-              onClick={() => {
-                haptic(8);
-                setView("inbox");
-              }}
-            >
-              <Bell size={18} />
-              {unreadCount > 0 && <span className="unread-badge">{unreadCount}</span>}
-            </button>
-            <div className="live-pill">
-              <Radio size={14} />
-              Live
-            </div>
-          </div>
-        </header>
-
-        <div className="phase-strip">
-          <span className="phase-dot" />
-          {forgeState.phase} phase
-          <span className="phase-deadline">Ends {forgeState.phaseEndsAt}</span>
-        </div>
-
-        {view === "arena" && <Arena players={players} vulture={vulture} />}
-        {view === "stakes" && (
-          <StakesRoom raise={raise} setRaise={setRaise} pot={weeklyPot} />
+        {view === "arena" && (
+          <Arena
+            vulture={vulture}
+            onOpenStakes={() => {
+              haptic(10);
+              setShowStakes(true);
+            }}
+            onOpenVault={() => setShowVault(true)}
+            onOpenSettings={() => setShowSettings(true)}
+          />
         )}
         {view === "submit" && (
-          <SundayPortal submission={submission} setSubmission={setSubmission} />
+          <SundayPortal
+            submission={submission}
+            setSubmission={setSubmission}
+            onBack={() => setView("arena")}
+          />
         )}
-        {view === "reveal" && <Reveal judged={judged} vulture={vulture} />}
+        {view === "reveal" && <Reveal judged={judged} onBack={() => setView("arena")} />}
         {view === "inbox" && (
           <Inbox
             items={inboxItems}
+            onBack={() => setView("arena")}
             onOpen={openNotification}
             onMarkAllRead={() => {
-              haptic(12);
+              haptic(10);
               setInboxItems((current) => current.map((item) => ({ ...item, unread: false })));
             }}
           />
         )}
-
-        <nav className="bottom-tabs" aria-label="Forge primary navigation">
-          {views.map((item) => {
-            const Icon = item.icon;
-            const isCenter = item.id === "submit";
-            const targetView = isCenter ? centerActionView : item.id;
-            const label = isCenter ? centerActionLabel : item.label;
-            return (
-              <button
-                key={item.id}
-                className={`${view === targetView ? "active" : ""} ${isCenter ? "center-tab" : ""}`}
-                aria-label={label}
-                onClick={() => {
-                  haptic(isCenter ? [14, 30, 14] : 8);
-                  setView(targetView);
-                }}
-              >
-                <span className="tab-icon"><Icon size={isCenter ? 21 : 17} /></span>
-                <span>{label}</span>
-                {item.id === "inbox" && unreadCount > 0 && (
-                  <span className="tab-unread-dot" aria-label={`${unreadCount} unread`} />
-                )}
-              </button>
-            );
-          })}
-        </nav>
       </section>
+
+      {showStakes && <StakesSheet onClose={() => setShowStakes(false)} />}
+      {showVault && <VaultSheet onClose={() => setShowVault(false)} />}
+      {showSettings && (
+        <SettingsSheet
+          unreadCount={inboxItems.filter((item) => item.unread).length}
+          onClose={() => setShowSettings(false)}
+          onInbox={() => {
+            setShowSettings(false);
+            setView("inbox");
+          }}
+          onReveal={() => {
+            setShowSettings(false);
+            setView("reveal");
+          }}
+        />
+      )}
 
       {selectedNotification && (
         <div className="sheet-backdrop" onClick={() => setSelectedNotification(null)}>
@@ -208,279 +147,198 @@ export function App() {
   );
 }
 
-function Arena({
-  players,
-  vulture
+function CompactHeader({
+  eyebrow,
+  title,
+  onBack
 }: {
-  players: Player[];
-  vulture: ReturnType<typeof calculateVultureProtocol>;
+  eyebrow: string;
+  title: string;
+  onBack: () => void;
 }) {
   return (
-    <div className="view stack">
-      <section className="pot-card">
-        <p>Weekly Live Pot</p>
-        <div className="odometer" aria-label={`$${weeklyPot}.00`}>
-          {"$650.00".split("").map((char, index) => (
-            <span key={`${char}-${index}`} style={{ animationDelay: `${index * 70}ms` }}>
+    <header className="compact-header">
+      <button className="back-button" onClick={onBack} aria-label="Return to Arena">
+        <ChevronRight size={18} className="back-chevron" />
+      </button>
+      <div>
+        <p className="eyebrow">{eyebrow}</p>
+        <h1>{title}</h1>
+      </div>
+      <div className="header-spacer" />
+    </header>
+  );
+}
+
+function Arena({
+  vulture,
+  onOpenStakes,
+  onOpenVault,
+  onOpenSettings
+}: {
+  vulture: ReturnType<typeof calculateVultureProtocol>;
+  onOpenStakes: () => void;
+  onOpenVault: () => void;
+  onOpenSettings: () => void;
+}) {
+  return (
+    <div className="view arena-view">
+      <header className="arena-header">
+        <button className="vault-status" onClick={onOpenVault} aria-label="Open Vulture Vault status">
+          <LockKeyhole size={15} />
+          <span>Vault</span>
+          <strong>${forgeState.vultureVaultBalance}</strong>
+        </button>
+        <div className="arena-brand">
+          <p className="eyebrow">Private ring · Week {forgeState.weekId}</p>
+          <h1>FORGE</h1>
+          <span><i /> Live standings</span>
+        </div>
+        <button className="icon-button gear-button" onClick={onOpenSettings} aria-label="Open Forge settings">
+          <Settings size={19} />
+        </button>
+      </header>
+
+      <section className="hero-pot-card">
+        <div className="pot-kicker"><Radio size={13} /> Weekly live pot</div>
+        <div className="odometer" aria-label={`$${forgeState.weeklyPot}.00`}>
+          {`$${forgeState.weeklyPot}.00`.split("").map((char, index) => (
+            <span key={`${char}-${index}`} style={{ animationDelay: `${index * 55}ms` }}>
               {char}
             </span>
           ))}
         </div>
-        <span>Winner-take-all - Monday 8:00 AM verdict</span>
-      </section>
-
-      {vulture.active && (
-        <section className="vulture-banner">
-          <Vault size={18} />
-          <div>
-            <strong>Vulture Protocol Armed</strong>
-            <p>${vulture.tax} seized into vault if the room keeps underperforming.</p>
-          </div>
-        </section>
-      )}
-
-      <section>
-        <div className="section-title">
-          <Swords size={18} />
-          <h2>Standings</h2>
-        </div>
-        <div className="leaderboard">
-          {[...players]
-            .sort((a, b) => a.rank - b.rank)
-            .map((player) => (
-              <PlayerCard key={player.id} player={player} />
-            ))}
-        </div>
-      </section>
-
-      <ActivityFeed />
-    </div>
-  );
-}
-
-function ActivityFeed() {
-  return (
-    <section>
-      <div className="section-title activity-heading">
-        <Radio size={18} />
-        <h2>Live Activity</h2>
-        <span className="new-pulse">New</span>
-      </div>
-      <div className="activity-feed">
-        {activityFeed.map((item) => (
-          <article key={item.id} className={`activity-row ${item.severity}`}>
-            <div className="activity-avatar">{item.actor.slice(0, 1)}</div>
-            <div>
-              <p><strong>{item.actor}</strong> {item.event}</p>
-              <span>{item.time}</span>
-            </div>
-          </article>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function Inbox({
-  items,
-  onOpen,
-  onMarkAllRead
-}: {
-  items: NotificationItem[];
-  onOpen: (item: NotificationItem) => void;
-  onMarkAllRead: () => void;
-}) {
-  const [filter, setFilter] = useState<NotificationCategory | "All">("All");
-  const categories: Array<NotificationCategory | "All"> = [
-    "All",
-    "Stakes",
-    "Submissions",
-    "Roasts",
-    "System",
-    "BS Audits"
-  ];
-  const filtered = filter === "All" ? items : items.filter((item) => item.category === filter);
-
-  return (
-    <div className="view stack inbox-view">
-      <section className="inbox-hero">
-        <div>
-          <p className="eyebrow">Private ring communications</p>
-          <h2>Inbox</h2>
-          <span>{items.filter((item) => item.unread).length} unread alerts</span>
-        </div>
-        <button className="text-button" onClick={onMarkAllRead}>
-          <CheckCheck size={16} /> Mark all read
+        <p>Winner-take-all · Monday 8:00 AM verdict</p>
+        <button className="stakes-link" onClick={onOpenStakes}>
+          Enter the Stakes Room <ChevronRight size={17} />
         </button>
       </section>
 
-      <div className="category-scroller" aria-label="Notification categories">
-        {categories.map((category) => (
-          <button
-            key={category}
-            className={filter === category ? "active" : ""}
-            onClick={() => {
-              haptic(6);
-              setFilter(category);
-            }}
-          >
-            {category}
-          </button>
-        ))}
-      </div>
-
-      <section className="inbox-list" aria-live="polite">
-        {filtered.length === 0 ? (
-          <div className="empty-state">
-            <InboxIcon size={24} />
-            <strong>No alerts here.</strong>
-            <span>The room is quiet. For now.</span>
-          </div>
-        ) : (
-          filtered.map((item) => (
-            <button
-              key={item.id}
-              className={`notification-row ${item.unread ? "unread" : ""}`}
-              onClick={() => onOpen(item)}
-            >
-              <span className={`notification-severity ${item.severity}`} />
-              <span className="notification-copy">
-                <span className="notification-meta">{item.category} · {item.time}</span>
-                <strong>{item.title}</strong>
-                <span>{item.body}</span>
-              </span>
-              {item.unread && <span className="unread-dot" aria-label="Unread" />}
-              <ChevronRight size={16} />
-            </button>
-          ))
-        )}
+      <section className="monthly-standings">
+        <div className="section-title standings-title">
+          <Swords size={16} />
+          <h2>Frozen monthly standings</h2>
+          <span>Week {forgeState.weekId} snapshot</span>
+        </div>
+        <div className="monthly-list">
+          {[...players]
+            .sort((a, b) => a.rank - b.rank)
+            .map((player) => <MonthlyPlayerCard key={player.id} player={player} />)}
+        </div>
       </section>
+
+      <div className="arena-footnote">
+        <LockKeyhole size={12} /> Monthly points freeze at Monday reveal
+      </div>
     </div>
   );
 }
 
-function PlayerCard({ player }: { player: Player }) {
-  const isFirst = player.rank === 1;
-  const isLast = player.rank === 5;
-
+function MonthlyPlayerCard({ player }: { player: Player }) {
+  const first = player.rank === 1;
+  const last = player.rank === 5;
   return (
-    <article
-      className={`player-card ${isFirst ? "champion" : ""} ${isLast ? "basement" : ""}`}
-    >
-      <div className="rank">{player.rank}</div>
-      <div className="player-main">
-        <div className="player-line">
+    <article className={`monthly-player ${first ? "monthly-champion" : ""} ${last ? "monthly-basement" : ""}`}>
+      <span className="monthly-rank">{player.rank}</span>
+      <span className="player-avatar">{player.name.slice(0, 1)}</span>
+      <div className="monthly-player-copy">
+        <div className="monthly-name-line">
           <h3>{player.name}</h3>
-          {player.badge && (
-            <span className={`badge ${player.badge.toLowerCase()}`}>{player.badge}</span>
-          )}
+          {player.badge && <span className={`badge ${player.badge.toLowerCase()}`}>{player.badge}</span>}
         </div>
-        <p>{player.role}</p>
-        <small>{player.evaluationRule}</small>
+        <span className="monthly-role">{player.role}</span>
       </div>
-      <div className="points">
+      <span className={`monthly-velocity ${player.direction}`} aria-label={`${player.direction} velocity`}>
+        {player.direction === "up" ? "▲" : player.direction === "down" ? "▼" : "—"}
+      </span>
+      <div className="monthly-points">
         <strong>{player.points}</strong>
         <span>pts</span>
       </div>
-      <div className={`velocity ${player.direction}`}>
-        {player.direction === "up" ? "▲" : player.direction === "down" ? "▼" : "—"}
-      </div>
+      <span className="monthly-status-line" />
     </article>
   );
 }
 
-function StakesRoom({
-  raise,
-  setRaise,
-  pot
-}: {
-  raise: number;
-  setRaise: (value: number) => void;
-  pot: number;
-}) {
-  const [nukeArmed, setNukeArmed] = useState(false);
+function StakesSheet({ onClose }: { onClose: () => void }) {
+  const [raise, setRaise] = useState(50);
+  const [nukeState, setNukeState] = useState<"idle" | "arming" | "confirmed">("idle");
   const holdTimer = useRef<number | undefined>(undefined);
-  const matched = ["James", "Angus"];
+  const baseExposure = 50;
+  const projectedPayout = Math.round(forgeState.weeklyPot / 5 + raise);
 
   const beginHold = () => {
-    haptic([20, 40, 20]);
-    setNukeArmed(true);
+    if (nukeState === "confirmed") return;
+    haptic([18, 30, 18]);
+    setNukeState("arming");
     holdTimer.current = window.setTimeout(() => {
-      haptic([80, 50, 120]);
-      setNukeArmed(false);
+      haptic([70, 40, 120]);
+      setNukeState("confirmed");
+      window.setTimeout(onClose, 650);
     }, 2000);
   };
 
   const cancelHold = () => {
     window.clearTimeout(holdTimer.current);
-    setNukeArmed(false);
+    if (nukeState === "arming") setNukeState("idle");
   };
 
   return (
-    <div className="view stack">
-      <section className="danger-card">
-        <div className="section-title">
-          <ShieldAlert size={18} />
-          <h2>Ante Engine</h2>
-        </div>
-        <p>
-          Drag the exposure slider, hold the Nuke Trigger for 2 seconds, and blast
-          the room with a match-or-fold notification.
-        </p>
-      </section>
+    <div className="sheet-backdrop stakes-backdrop">
+      <section className="stakes-sheet" role="dialog" aria-modal="true" aria-labelledby="stakes-title">
+        <div className="sheet-handle" />
+        <header className="sheet-topline">
+          <div>
+            <p className="eyebrow">Mid-week action · Week {forgeState.weekId}</p>
+            <h2 id="stakes-title">Stakes Room</h2>
+          </div>
+          <button className="icon-button" onClick={onClose} aria-label="Close Stakes Room">
+            <X size={18} />
+          </button>
+        </header>
 
-      <section className="slider-card">
-        <div className="raise-row">
-          <span>Extra Injection</span>
-          <strong>${raise}</strong>
-        </div>
-        <input
-          aria-label="Extra injection"
-          type="range"
-          min="50"
-          max="300"
-          step="50"
-          value={raise}
-          onChange={(event) => {
-            haptic(10);
-            setRaise(Number(event.target.value));
-          }}
-        />
-        <div className="synth-meter">
-          <span style={{ width: `${(raise / 300) * 100}%` }} />
-        </div>
-        <div className="pot-preview">
-          <Gauge size={16} />
-          New pot if matched: <strong>${pot + raise * 5}</strong>
-        </div>
-      </section>
+        <section className="payout-estimate">
+          <span>Real-time payout estimate</span>
+          <div><strong>Your Current Exposure: ${baseExposure}</strong><strong>Projected Payout: ${projectedPayout}</strong></div>
+          <small>Gross pool ${forgeState.weeklyPot} · your raise is held pending match lock</small>
+        </section>
 
-      <button
-        className={`nuke-button ${nukeArmed ? "arming" : ""}`}
-        onPointerDown={beginHold}
-        onPointerUp={cancelHold}
-        onPointerLeave={cancelHold}
-      >
-        <Skull size={22} />
-        Hold 2s to Nuke +${raise}
-        <span className="hold-ring" />
-      </button>
+        <section className="bet-slider-panel">
+          <div className="slider-label-row">
+            <div><span>Extra cash injection</span><strong>+${raise}</strong></div>
+            <Gauge size={18} />
+          </div>
+          <input
+            aria-label="Extra cash injection"
+            type="range"
+            min="10"
+            max="100"
+            step="10"
+            value={raise}
+            onChange={(event) => {
+              haptic(10);
+              setRaise(Number(event.target.value));
+            }}
+          />
+          <div className="slider-milestones"><span>+$10</span><span>+$50</span><span>+$100</span></div>
+          <div className="crimson-tick-meter"><span style={{ width: `${raise}%` }} /></div>
+          <p>Slide right to increase exposure. Every milestone is broadcast to the ring.</p>
+        </section>
 
-      <section>
-        <div className="section-title">
-          <Zap size={18} />
-          <h2>Match Grid</h2>
-        </div>
-        <div className="silhouette-grid">
-          {players.map((player) => (
-            <div
-              key={player.id}
-              className={matched.includes(player.name) ? "matched" : ""}
-            >
-              <span>{player.name[0]}</span>
-              <p>{matched.includes(player.name) ? "Matched" : "Pending"}</p>
-            </div>
-          ))}
+        <div className="nuke-zone">
+          <button
+            className={`confirm-double-button ${nukeState}`}
+            onPointerDown={beginHold}
+            onPointerUp={cancelHold}
+            onPointerLeave={cancelHold}
+            onPointerCancel={cancelHold}
+          >
+            {nukeState === "confirmed" ? <Check size={24} /> : <Skull size={22} />}
+            {nukeState === "confirmed" ? "Double Down Locked" : "Confirm Double Down"}
+            <span className="hold-ring" />
+          </button>
+          <button className="cancel-link" onClick={onClose}>Cancel and Return</button>
+          <span className="hold-caption">Hold continuously for 2 seconds to lock</span>
         </div>
       </section>
     </div>
@@ -489,159 +347,141 @@ function StakesRoom({
 
 function SundayPortal({
   submission,
-  setSubmission
+  setSubmission,
+  onBack
 }: {
   submission: string;
   setSubmission: (value: string) => void;
+  onBack: () => void;
 }) {
+  const [locked, setLocked] = useState(false);
   const charsLeft = 280 - submission.length;
+  const countSeverity = charsLeft < 40 ? "critical" : charsLeft < 90 ? "warning" : "safe";
+  const ready = submission.trim().length >= 10;
 
   return (
-    <div className="view stack">
-      <section className="terminal-card">
-        <div className="section-title">
-          <Flame size={18} />
-          <h2>Submission Terminal</h2>
-        </div>
-        <p className="window-copy">Active Sunday 6:00 PM - 11:59 PM</p>
-        <div className="textarea-shell" data-limit="280 MAX">
-          <textarea
-            maxLength={280}
-            value={submission}
-            onChange={(event) => setSubmission(event.target.value.slice(0, 280))}
-            placeholder="State your milestone. No fluff, no stories. The judge values outcomes over hours."
-          />
-        </div>
-        <div className={charsLeft < 40 ? "char-count warning" : "char-count"}>
-          {charsLeft} characters remaining
-        </div>
+    <div className="view submission-view">
+      <CompactHeader eyebrow="Sunday 6:00 PM · submission window" title="Sunday Portal" onBack={onBack} />
+      <section className="submission-intro">
+        <span className="submission-live"><i /> Portal open</span>
+        <p>One milestone. One clean claim. No actions, no hours logged. The judge values outcomes over labor.</p>
       </section>
-
-      <button className="submit-button" disabled={!submission.trim()} onClick={() => haptic(20)}>
-        Lock Submission
-        <ChevronRight size={18} />
-      </button>
+      <div className={`submission-input-shell ${locked ? "locked" : ""}`}>
+        <textarea
+          aria-label="Milestone submission"
+          maxLength={280}
+          disabled={locked}
+          value={submission}
+          onChange={(event) => setSubmission(event.target.value.slice(0, 280))}
+          placeholder="State your milestone. No actions, no hours logged. The judge values outcomes over labor."
+        />
+        <span className={`submission-counter ${countSeverity}`}>{charsLeft}</span>
+        <span className="counter-label">characters left</span>
+      </div>
+      <div className="submission-bottom">
+        <p className="submission-proof-note"><ShieldAlert size={14} /> Claims may be challenged during the Monday audit window.</p>
+        <button
+          className={`commit-button ${locked ? "locked" : ""}`}
+          disabled={!ready || locked}
+          onClick={() => {
+            haptic([20, 35, 20]);
+            setLocked(true);
+          }}
+        >
+          {locked ? <><CircleCheck size={20} /> Milestone Committed</> : <>Commit Milestone <ChevronRight size={18} /></>}
+        </button>
+        {!locked && !ready && <span className="minimum-copy">10 characters minimum to submit</span>}
+      </div>
     </div>
   );
 }
 
-function Reveal({
-  judged,
-  vulture
-}: {
-  judged: ReturnType<typeof judgeWeeklyPool>;
-  vulture: ReturnType<typeof calculateVultureProtocol>;
-}) {
-  const bottomUp = [...judged].sort((a, b) => b.rank - a.rank);
-
+function VaultSheet({ onClose }: { onClose: () => void }) {
   return (
-    <div className="view stack reveal-view">
-      <section className="showdown-hero">
-        <Crown size={28} />
-        <p>Monday 8:00 AM</p>
-        <h2>The Showdown Loop</h2>
+    <div className="sheet-backdrop" onClick={onClose}>
+      <section className="vault-sheet" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+        <div className="sheet-handle" />
+        <LockKeyhole size={22} className="vault-sheet-icon" />
+        <p className="eyebrow">Vulture Vault status</p>
+        <h2>${forgeState.vultureVaultBalance}</h2>
+        <p>Drained from slump weeks. Paid to the Monthly Champion.</p>
+        <button className="sheet-action" onClick={onClose}>Understood</button>
       </section>
+    </div>
+  );
+}
 
-      {vulture.active && (
-        <section className="vulture-card">
-          <Vault size={22} />
-          <div>
-            <strong>{vulture.notification}</strong>
-            <p>
-              ${vulture.tax} captured. Winner payout reduced to ${vulture.winnerPayout}.
-              Vault rises to ${vulture.vaultAfterCapture}.
-            </p>
-          </div>
-        </section>
-      )}
+function SettingsSheet({
+  unreadCount,
+  onClose,
+  onInbox,
+  onReveal
+}: {
+  unreadCount: number;
+  onClose: () => void;
+  onInbox: () => void;
+  onReveal: () => void;
+}) {
+  return (
+    <div className="sheet-backdrop" onClick={onClose}>
+      <section className="settings-sheet" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+        <div className="sheet-handle" />
+        <header className="sheet-topline">
+          <div><p className="eyebrow">Forge control center</p><h2>Settings</h2></div>
+          <button className="icon-button" onClick={onClose} aria-label="Close settings"><X size={18} /></button>
+        </header>
+        <div className="settings-list">
+          <button className="settings-row"><UserRound size={19} /><span><strong>Profile management</strong><small>Noah · Software Developer</small></span><ChevronRight size={16} /></button>
+          <button className="settings-row"><WalletCards size={19} /><span><strong>Wallet history</strong><small>$0.00 available · $420 vault protected</small></span><ChevronRight size={16} /></button>
+          <button className="settings-row"><Medal size={19} /><span><strong>Career Hall of Fame</strong><small>James leads Week 3</small></span><ChevronRight size={16} /></button>
+          <button className="settings-row" onClick={onInbox}><Bell size={19} /><span><strong>Inbox</strong><small>{unreadCount} unread alerts</small></span><ChevronRight size={16} /></button>
+          <button className="settings-row" onClick={onReveal}><Crown size={19} /><span><strong>Replay last reveal</strong><small>Review the Week 3 verdict</small></span><ChevronRight size={16} /></button>
+        </div>
+      </section>
+    </div>
+  );
+}
 
-      <div className="reveal-list">
-        {bottomUp.map((player) => (
-          <article key={player.id} className={`reveal-card rank-${player.rank}`}>
-            <div>
-              <span>Rank #{player.rank}</span>
-              <h3>{player.name}</h3>
-            </div>
-            <p>{player.roast}</p>
-            <small>Proof gate: {player.proofRequired}</small>
-            <strong>{player.rankAward} awarded points</strong>
-          </article>
+function Reveal({ judged, onBack }: { judged: ReturnType<typeof judgeWeeklyPool>; onBack: () => void }) {
+  const winner = judged.find((player) => player.rank === 1);
+  return (
+    <div className="view compact-view">
+      <CompactHeader eyebrow="Monday 8:00 AM · completed" title="The Reveal" onBack={onBack} />
+      <section className="reveal-winner-card"><Crown size={26} /><span>Week {forgeState.weekId} champion</span><h2>{winner?.name}</h2><strong>${forgeState.weeklyPot}</strong><p>Winner-take-all payout before vault transfer.</p></section>
+      <div className="reveal-summary"><History size={17} /><span>Bottom-up extraction completed</span><span className="reveal-summary-count">5 ranks cleared</span></div>
+      <div className="compact-rank-list">{judged.slice(1, 4).map((player) => <div key={player.id}><span>#{player.rank}</span><strong>{player.name}</strong><small>{player.rankAward} pts</small></div>)}</div>
+      <button className="sheet-action" onClick={onBack}>Return to Arena</button>
+    </div>
+  );
+}
+
+function Inbox({
+  items,
+  onBack,
+  onOpen,
+  onMarkAllRead
+}: {
+  items: NotificationItem[];
+  onBack: () => void;
+  onOpen: (item: NotificationItem) => void;
+  onMarkAllRead: () => void;
+}) {
+  const unreadCount = items.filter((item) => item.unread).length;
+  return (
+    <div className="view compact-view inbox-compact-view">
+      <CompactHeader eyebrow="Private ring communications" title="Inbox" onBack={onBack} />
+      <div className="inbox-summary"><span>{unreadCount} unread alerts</span><button className="text-button" onClick={onMarkAllRead}>Mark all read</button></div>
+      <div className="compact-inbox-list">
+        {items.slice(0, 5).map((item) => (
+          <button key={item.id} className={`compact-notification ${item.unread ? "unread" : ""}`} onClick={() => onOpen(item)}>
+            <span className={`notification-severity ${item.severity}`} />
+            <span><small>{item.category} · {item.time}</small><strong>{item.title}</strong><em>{item.body}</em></span>
+            {item.unread && <i />}
+            <ChevronRight size={15} />
+          </button>
         ))}
       </div>
-
-      <button className="bs-button" onClick={() => haptic([30, 20, 30])}>
-        <Eye size={18} />
-        BS Button - 2 Hour Audit Window
-      </button>
-    </div>
-  );
-}
-
-function SystemSpec() {
-  return (
-    <div className="view stack">
-      <section className="system-card">
-        <div className="section-title">
-          <Trophy size={18} />
-          <h2>Build Spine</h2>
-        </div>
-        <div className="architecture">
-          <span>App</span>
-          <ChevronRight size={14} />
-          <span>Supabase</span>
-          <ChevronRight size={14} />
-          <span>Server Judge API</span>
-          <ChevronRight size={14} />
-          <span>OpenAI JSON</span>
-          <ChevronRight size={14} />
-          <span>Stripe Connect</span>
-        </div>
-      </section>
-
-      <section className="system-card">
-        <div className="section-title">
-          <Vault size={18} />
-          <h2>Vulture State Machine</h2>
-        </div>
-        <pre>{`if (group_performance === "slump") {
-  const vultureTax = weekly_pot * 0.30;
-  vulture_vault_balance += vultureTax;
-  winner_payout = weekly_pot - vultureTax;
-  triggerGlobalNotification("Vulture Protocol Activated: Money Seized.");
-}`}</pre>
-      </section>
-
-      <section className="prompt-card">
-        <div className="section-title">
-          <AlertTriangle size={18} />
-          <h2>Server Judge Contract</h2>
-        </div>
-        <pre>{JSON.stringify(judgeEndpointContract, null, 2)}</pre>
-      </section>
-
-      <section className="prompt-card">
-        <div className="section-title">
-          <AlertTriangle size={18} />
-          <h2>Judge Prompt Seed</h2>
-        </div>
-        <pre>{judgePrompt}</pre>
-      </section>
-
-      <section>
-        <div className="section-title">
-          <Radio size={18} />
-          <h2>Notification Lifecycle</h2>
-        </div>
-        <div className="notification-list">
-          {notifications.map((note) => (
-            <article key={note.title}>
-              <span>{note.time}</span>
-              <h3>{note.title}</h3>
-              <p>{note.body}</p>
-            </article>
-          ))}
-        </div>
-      </section>
+      <div className="empty-inbox-footer"><InboxIcon size={15} /> Showing the latest ring alerts</div>
     </div>
   );
 }
