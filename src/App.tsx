@@ -6,9 +6,9 @@ import {
   CircleCheck,
   Crown,
   Gauge,
-  History,
   Inbox as InboxIcon,
   Menu,
+  History,
   LockKeyhole,
   Medal,
   Radio,
@@ -36,8 +36,8 @@ import {
   type Player
 } from "./data";
 
-type MainView = "arena" | "inbox" | "stakes" | "profile" | "wallet";
-type AppTab = "week" | "ledger" | "stakes" | "account";
+type MainView = "arena" | "stakes" | "profile" | "wallet";
+type AppTab = "home" | "ledger" | "bounties" | "account";
 type LedgerMode = "season" | "archive";
 
 function nextSundayPrompt(now: Date) {
@@ -67,17 +67,21 @@ function haptic(pattern: number | number[] = 12) {
 export function App() {
   const stage = forgeState.week_stage;
   const [view, setView] = useState<MainView>("arena");
-  const [activeTab, setActiveTab] = useState<AppTab>("week");
+  const [activeTab, setActiveTab] = useState<AppTab>("home");
   const [submission, setSubmission] = useState("");
   const [showVault, setShowVault] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showAlerts, setShowAlerts] = useState(false);
   const [inboxItems, setInboxItems] = useState<NotificationItem[]>(notifications);
   const [selectedNotification, setSelectedNotification] = useState<NotificationItem | null>(null);
   const [auditPlayerId, setAuditPlayerId] = useState<string | null>(null);
+  const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [now, setNow] = useState(() => new Date());
   const judged = useMemo(() => (stage === "reveal" ? judgeWeeklyPool(players) : null), [stage]);
   const vulture = useMemo(() => calculateVultureProtocol(forgeState), []);
   const countdown = formatCountdown(nextSundayPrompt(now).getTime() - now.getTime());
+  const highStakeAlerts = inboxItems.filter((item) => ["notif-raise", "notif-audit", "notif-vulture-risk"].includes(item.id));
+  const unreadHighStakeCount = highStakeAlerts.filter((item) => item.unread).length;
 
   useEffect(() => {
     const interval = window.setInterval(() => setNow(new Date()), 1000);
@@ -91,6 +95,7 @@ export function App() {
         notification.id === item.id ? { ...notification, unread: false } : notification
       )
     );
+    setShowAlerts(false);
     setSelectedNotification({ ...item, unread: false });
   };
 
@@ -132,21 +137,23 @@ export function App() {
       <div className="ambient ambient-red" />
 
         <section className="phone-frame active-phone">
-        {view === "arena" && activeTab === "week" && (
+        {view === "arena" && activeTab === "home" && (
           <Arena
             vulture={vulture}
             countdown={countdown}
             onOpenStakes={() => {
               haptic(10);
-              setActiveTab("stakes");
+              setActiveTab("bounties");
               setView("stakes");
             }}
             onOpenVault={() => setShowVault(true)}
-            onOpenSettings={() => setShowSettings(true)}
+            onOpenAlerts={() => setShowAlerts(true)}
             onOpenLedger={() => {
               setActiveTab("ledger");
               setView("arena");
             }}
+            onOpenProfile={setSelectedPlayerId}
+            unreadHighStakeCount={unreadHighStakeCount}
             auditPlayerId={auditPlayerId}
           />
         )}
@@ -163,26 +170,15 @@ export function App() {
             }}
           />
         )}
-        {view === "stakes" && <StakesPage onClose={() => { setActiveTab("week"); setView("arena"); }} />}
+        {view === "stakes" && <StakesPage onClose={() => { setActiveTab("home"); setView("arena"); }} />}
         {view === "profile" && <ProfileEditView onBack={() => setView("arena")} />}
         {view === "wallet" && <WalletHistoryView onBack={() => setView("arena")} />}
-        {view === "inbox" && (
-          <Inbox
-            items={inboxItems}
-            onBack={() => setView("arena")}
-            onOpen={openNotification}
-            onMarkAllRead={() => {
-              haptic(10);
-              setInboxItems((current) => current.map((item) => ({ ...item, unread: false })));
-            }}
-          />
-        )}
         {(view === "arena" || view === "stakes" || view === "profile" || view === "wallet") && (
           <ActiveBottomNav
-            activeTab={view === "stakes" ? "stakes" : view === "profile" || view === "wallet" ? "account" : activeTab}
+            activeTab={view === "stakes" ? "bounties" : view === "profile" || view === "wallet" ? "account" : activeTab}
             onSelect={(tab) => {
               haptic(8);
-              setView(tab === "stakes" ? "stakes" : "arena");
+              setView(tab === "bounties" ? "stakes" : "arena");
               setActiveTab(tab);
             }}
           />
@@ -190,18 +186,31 @@ export function App() {
       </section>
 
       {showVault && <VaultSheet onClose={() => setShowVault(false)} />}
+      {showAlerts && (
+        <AlertPanel
+          items={highStakeAlerts}
+          unreadCount={unreadHighStakeCount}
+          onClose={() => setShowAlerts(false)}
+          onOpen={openNotification}
+          onMarkAllRead={() => {
+            haptic(10);
+            setInboxItems((current) => current.map((item) => ({ ...item, unread: false })));
+          }}
+        />
+      )}
+      {selectedPlayerId && (
+        <CompetitorProfileSheet
+          player={players.find((player) => player.id === selectedPlayerId) ?? players[0]}
+          onClose={() => setSelectedPlayerId(null)}
+        />
+      )}
       {showSettings && (
         <SettingsSheet
-          unreadCount={inboxItems.filter((item) => item.unread).length}
           onClose={() => setShowSettings(false)}
           onProfile={() => {
             setShowSettings(false);
             setActiveTab("account");
             setView("profile");
-          }}
-          onInbox={() => {
-            setShowSettings(false);
-            setView("inbox");
           }}
         />
       )}
@@ -268,16 +277,20 @@ function Arena({
   countdown,
   onOpenStakes,
   onOpenVault,
-  onOpenSettings,
+  onOpenAlerts,
   onOpenLedger,
+  onOpenProfile,
+  unreadHighStakeCount,
   auditPlayerId
 }: {
   vulture: ReturnType<typeof calculateVultureProtocol>;
   countdown: string;
   onOpenStakes: () => void;
   onOpenVault: () => void;
-  onOpenSettings: () => void;
+  onOpenAlerts: () => void;
   onOpenLedger: () => void;
+  onOpenProfile: (playerId: string) => void;
+  unreadHighStakeCount: number;
   auditPlayerId: string | null;
 }) {
   return (
@@ -293,8 +306,9 @@ function Arena({
           <h1>FORGE</h1>
           <span><i /> Blind weekly state</span>
         </div>
-        <button className="icon-button gear-button" onClick={onOpenSettings} aria-label="Open Forge menu">
-          <Menu size={19} />
+        <button className="icon-button alert-button" onClick={onOpenAlerts} aria-label={`Open high-stakes alerts${unreadHighStakeCount ? `, ${unreadHighStakeCount} unread` : ""}`}>
+          <Bell size={18} />
+          {unreadHighStakeCount > 0 && <span className="alert-badge">{unreadHighStakeCount}</span>}
         </button>
       </header>
 
@@ -329,13 +343,45 @@ function Arena({
         <div className="monthly-list">
           {[...players]
             .sort((a, b) => a.name.localeCompare(b.name))
-            .map((player) => <BlindPlayerCard key={player.id} player={player} />)}
+            .map((player) => <BlindPlayerCard key={player.id} player={player} onOpenProfile={onOpenProfile} />)}
         </div>
       </section>
 
       <div className="arena-footnote">
         <LockKeyhole size={12} /> Current submissions and ranks are sealed
       </div>
+    </div>
+  );
+}
+
+function CompetitorProfileSheet({ player, onClose }: { player: Player; onClose: () => void }) {
+  return (
+    <div className="sheet-backdrop competitor-profile-backdrop" onClick={onClose}>
+      <section className="competitor-profile-panel" role="dialog" aria-modal="true" aria-labelledby="competitor-profile-title" onClick={(event) => event.stopPropagation()}>
+        <header className="competitor-profile-header">
+          <div className="competitor-profile-identity">
+            <span className="competitor-profile-avatar">{player.name.slice(0, 1)}</span>
+            <div><p className="eyebrow">Immutable competitor profile</p><h2 id="competitor-profile-title">{player.name}</h2><span>{player.role}</span></div>
+          </div>
+          <button className="icon-button" onClick={onClose} aria-label="Close competitor profile"><X size={18} /></button>
+        </header>
+        <section className="competitor-baseline-card"><span>Business baseline</span><strong>{player.contextBaseline}</strong><p>{player.evaluationRule}</p></section>
+        <div className="competitor-wallet-metric"><span>Lifetime ring wallet</span><strong className={player.lifetimeBalance >= 0 ? "positive" : "negative"}>{player.lifetimeBalance >= 0 ? "+" : "−"}${Math.abs(player.lifetimeBalance).toLocaleString()}</strong><small>Net earnings / losses inside this private ring</small></div>
+        <section className="competitor-history"><div className="section-title"><History size={14} /><h3>Past 3 submissions</h3><span>Settled record</span></div><div className="competitor-history-list">{player.history.slice(0, 3).map((entry) => <article key={entry}><span className="history-dot" /><p>{entry}</p></article>)}</div></section>
+        <div className="competitor-sealed-note"><LockKeyhole size={14} /><span>Current Week 3 submission is sealed until Monday’s reveal.</span></div>
+      </section>
+    </div>
+  );
+}
+
+function AlertPanel({ items, unreadCount, onClose, onOpen, onMarkAllRead }: { items: NotificationItem[]; unreadCount: number; onClose: () => void; onOpen: (item: NotificationItem) => void; onMarkAllRead: () => void }) {
+  return (
+    <div className="sheet-backdrop alert-backdrop" onClick={onClose}>
+      <section className="alert-panel" role="dialog" aria-modal="true" aria-labelledby="alert-panel-title" onClick={(event) => event.stopPropagation()}>
+        <header className="alert-panel-header"><div><p className="eyebrow">Economic event stream</p><h2 id="alert-panel-title">High-stakes alerts</h2><span>{unreadCount} unread triggers</span></div><button className="icon-button" onClick={onClose} aria-label="Close high-stakes alerts"><X size={18} /></button></header>
+        <div className="alert-panel-actions"><span>Raises · audits · Vulture tax</span><button className="text-button" onClick={onMarkAllRead}>Mark all read</button></div>
+        <div className="alert-panel-list">{items.map((item) => <button key={item.id} className={`alert-panel-item ${item.unread ? "unread" : ""}`} onClick={() => onOpen(item)}><span className={`notification-severity ${item.severity}`} /><span><small>{item.category} · {item.time}</small><strong>{item.title}</strong><em>{item.body}</em></span>{item.unread && <i />}<ChevronRight size={15} /></button>)}</div>
+      </section>
     </div>
   );
 }
@@ -424,7 +470,7 @@ function AccountView({ onOpenSettings, onOpenProfileEdit, onOpenWallet }: { onOp
         <span>SOFTWARE DEVELOPER · MEMBER</span>
         <div className="profile-grid"><span>Focus<strong>Software launches</strong></span><span>Lifetime balance<strong>${players.find((player) => player.id === "noah")?.lifetimeBalance ?? 0}</strong></span><span>Member ID<strong>FORGE-042</strong></span><span>Current form<strong className="down-copy">▼ Drift</strong></span></div>
       </section>
-      <div className="account-actions"><button onClick={onOpenWallet}><WalletCards size={16} /> Wallet history <ChevronRight size={15} /></button><button><Medal size={16} /> Career Hall of Fame <ChevronRight size={15} /></button><button><Bell size={16} /> Notifications <ChevronRight size={15} /></button></div>
+      <div className="account-actions"><button onClick={onOpenWallet}><WalletCards size={16} /> Wallet history <ChevronRight size={15} /></button><button><Medal size={16} /> Career Hall of Fame <ChevronRight size={15} /></button></div>
       <button className="account-edit-button" onClick={onOpenProfileEdit}>Edit profile <ChevronRight size={15} /></button>
     </div>
   );
@@ -452,18 +498,17 @@ function ActiveBottomNav({
 }) {
   return (
     <nav className="forge-bottom-nav" aria-label="Forge primary navigation">
-      <button className={activeTab === "week" ? "active" : ""} onClick={() => onSelect("week")}><Radio size={15} /><span>This Week</span></button>
+      <button className={`forge-mark-button ${activeTab === "home" ? "active" : ""}`} onClick={() => onSelect("home")} aria-label="Open Forge home"><span>F</span><small>Home</small></button>
       <button className={activeTab === "ledger" ? "active" : ""} onClick={() => onSelect("ledger")}><History size={15} /><span>The Ledger</span></button>
-      <button className="forge-mark-button" onClick={() => onSelect("week")} aria-label="Return to Forge home"><span>F</span></button>
-      <button onClick={() => onSelect("stakes")}><WalletCards size={15} /><span>Stakes</span></button>
+      <button className={activeTab === "bounties" ? "active" : ""} onClick={() => onSelect("bounties")}><WalletCards size={15} /><span>Bounties</span></button>
       <button className={activeTab === "account" ? "active" : ""} onClick={() => onSelect("account")}><UserRound size={15} /><span>Account</span></button>
     </nav>
   );
 }
 
-function BlindPlayerCard({ player, secured = false }: { player: Player; secured?: boolean }) {
+function BlindPlayerCard({ player, secured = false, onOpenProfile }: { player: Player; secured?: boolean; onOpenProfile?: (playerId: string) => void }) {
   return (
-    <article className="monthly-player blind-player">
+    <button type="button" className={`monthly-player blind-player ${onOpenProfile ? "profile-trigger" : ""}`} onClick={() => onOpenProfile?.(player.id)} aria-label={onOpenProfile ? `Open ${player.name} competitor profile` : undefined}>
       <span className="player-avatar">{player.name.slice(0, 1)}</span>
       <div className="monthly-player-copy">
         <div className="monthly-name-line">
@@ -479,7 +524,7 @@ function BlindPlayerCard({ player, secured = false }: { player: Player; secured?
       <span className={`monthly-velocity ${player.direction}`} aria-label="Previous week momentum">
         {player.direction === "up" ? "▲" : player.direction === "down" ? "▼" : "—"}
       </span>
-    </article>
+    </button>
   );
 }
 
@@ -511,7 +556,7 @@ function StakesPage({ onClose }: { onClose: () => void }) {
         <header className="sheet-topline">
           <div>
             <p className="eyebrow">Mid-week action · Week {forgeState.weekId}</p>
-            <h2 id="stakes-title">Stakes Room</h2>
+            <h2 id="stakes-title">Bounties</h2>
           </div>
           <button className="icon-button" onClick={onClose} aria-label="Close Stakes Room"><X size={18} /></button>
         </header>
@@ -794,17 +839,7 @@ function VaultSheet({ onClose }: { onClose: () => void }) {
   );
 }
 
-function SettingsSheet({
-  unreadCount,
-  onClose,
-  onProfile,
-  onInbox
-}: {
-  unreadCount: number;
-  onClose: () => void;
-  onProfile: () => void;
-  onInbox: () => void;
-}) {
+function SettingsSheet({ onClose, onProfile }: { onClose: () => void; onProfile: () => void }) {
   return (
     <div className="sheet-backdrop" onClick={onClose}>
       <section className="settings-sheet" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
@@ -814,10 +849,9 @@ function SettingsSheet({
           <button className="icon-button" onClick={onClose} aria-label="Close settings"><X size={18} /></button>
         </header>
         <div className="settings-list">
-          <button className="settings-row"><UserRound size={19} /><span><strong>Profile management</strong><small>Noah · Software Developer</small></span><ChevronRight size={16} /></button>
+          <button className="settings-row" onClick={onProfile}><UserRound size={19} /><span><strong>Profile management</strong><small>Noah · Software Developer</small></span><ChevronRight size={16} /></button>
           <button className="settings-row"><WalletCards size={19} /><span><strong>Wallet history</strong><small>$0.00 available · $420 vault protected</small></span><ChevronRight size={16} /></button>
           <button className="settings-row"><Medal size={19} /><span><strong>Career Hall of Fame</strong><small>James leads Week 3</small></span><ChevronRight size={16} /></button>
-          <button className="settings-row" onClick={onInbox}><Bell size={19} /><span><strong>Inbox</strong><small>{unreadCount} unread alerts</small></span><ChevronRight size={16} /></button>
         </div>
       </section>
     </div>

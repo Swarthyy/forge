@@ -3,20 +3,20 @@
 ## iOS app convention fixes
 
 - [x] Replace the current top navigation tabs with an iOS-style bottom tab bar.
-- [x] Use 5 primary tabs: This Week, Members, Forge, Stakes, Account.
+- [x] Use 4 primary tabs: Home/F, The Ledger, Bounties, Account.
 - [ ] Add a prominent center action state for Submit or Nuke depending on the current weekly phase.
 - [x] Ensure all tappable controls meet a minimum 44x44 touch target.
 - [x] Add safe-area spacing for iPhone-style bottom navigation.
-- [x] Convert secondary actions into native-feeling bottom sheets or modal sheets.
+- [x] Use normal in-app pages for Stakes, Edit Profile, Wallet History, and Ledger destinations.
 - [ ] Add clear pressed, disabled, loading, and confirmed states for buttons.
 - [x] Standardize card radii, spacing, blur, shadows, and dark-mode hierarchy.
 
 ## Notifications and inbox
 
 - [x] Add a top-right bell icon with unread badge.
-- [x] Add a dedicated Inbox tab.
+- [x] Replace the generic Inbox route with a high-stakes alert panel.
 - [x] Create a mock notification feed.
-- [x] Add notification categories: Stakes, Submissions, Roasts, System, BS Audits.
+- [x] Filter the alert panel to raises, audits, and Vulture tax events.
 - [x] Add notification detail sheet.
 - [x] Add “mark all read” action.
 - [x] Show mock competitive notifications:
@@ -47,13 +47,22 @@
 
 ## Ledger, archive, and wallet history
 
-- [x] Replace the Members route with The Ledger.
+- [x] Remove the redundant This Week and Members routes.
+- [x] Make the centered F button the exclusive Home/Arena route.
+- [x] Add Bounties as the micro-economy destination.
 - [x] Add Monthly Season standings with cumulative points and winner history.
 - [x] Add settled-week Archive browsing with accordion entries.
 - [x] Show archived achievement text, AI commentary, and verification previews.
 - [x] Add BS Vote audit interaction with a pulsing Arena warning banner.
 - [x] Add normal-page Wallet History route with credits, debits, holds, and fees.
 - [x] Keep active-week standings and submission text hidden while browsing the Ledger.
+
+## Competitor context
+
+- [x] Make blind competitor rows fully touchable from the Arena.
+- [x] Open a full-height competitor profile panel from each row.
+- [x] Show immutable business baseline, lifetime ring wallet, and the past 3 settled submissions.
+- [x] Keep each competitor's current-week submission sealed until the Monday reveal.
 
 ## Weekly state machine
 

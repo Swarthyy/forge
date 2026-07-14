@@ -158,7 +158,8 @@ export const players: Player[] = [
     proofRequired: "Dashboard screenshot: streaming lift, pre-sale revenue, or signed partner confirmation.",
     history: [
       "Wk 1: Launched paid funnel; Rank 2",
-      "Wk 2: Closed sponsorship package; Rank 1"
+      "Wk 2: Closed sponsorship package; Rank 1",
+      "Wk 0: Built audience waitlist; Rank 3"
     ],
     roast:
       "James turned attention into measurable leverage. Distribution moved, money risked, weak weeks punished."
@@ -184,7 +185,8 @@ export const players: Player[] = [
     proofRequired: "Signed retainer, Stripe invoice, or client confirmation screenshot.",
     history: [
       "Wk 1: Delivered campaign assets; Rank 3",
-      "Wk 2: Booked 3 sales calls; Rank 2"
+      "Wk 2: Booked 3 sales calls; Rank 2",
+      "Wk 0: Cut first agency reel; Rank 4"
     ],
     roast:
       "A real revenue counterpunch. Strong enough to scare the room, not sharp enough to steal the crown."
@@ -210,7 +212,8 @@ export const players: Player[] = [
     proofRequired: "Skool paid member count, payout dashboard, or Stripe subscription evidence.",
     history: [
       "Wk 1: Reposted archive content; Rank 5",
-      "Wk 2: Secured brand meeting; Rank 4"
+      "Wk 2: Secured brand meeting; Rank 4",
+      "Wk 0: Opened first community cohort; Rank 2"
     ],
     roast:
       "Finally pointed the machine at recurring money. Net-new paid members beat vanity content every day."
@@ -236,7 +239,8 @@ export const players: Player[] = [
     proofRequired: "Production URL, user analytics, deployment log, or customer usage proof.",
     history: [
       "Wk 1: Built private prototype; Rank 4",
-      "Wk 2: Added auth flow; Rank 3"
+      "Wk 2: Added auth flow; Rank 3",
+      "Wk 0: Shipped internal tool; Rank 5"
     ],
     roast:
       "Useful, but still hiding in builder cave fog. Testers are not traction unless they touch a live product."
@@ -263,7 +267,8 @@ export const players: Player[] = [
     proofRequired: "Production deployment URL or user-facing shipped feature evidence.",
     history: [
       "Wk 1: Acquired first client; Rank 1",
-      "Wk 2: Shipped prototype; Rank 3"
+      "Wk 2: Shipped prototype; Rank 3",
+      "Wk 0: Scoped the product; Rank 4"
     ],
     roast:
       "Noah submitted a timesheet with cologne on it. Hours are not outcomes. This is regression dressed as grind."
