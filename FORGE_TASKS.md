@@ -4,6 +4,7 @@
 
 - [x] Replace the current top navigation tabs with an iOS-style bottom tab bar.
 - [x] Use 4 primary tabs: Home/F, The Ledger, Bounties, Account.
+- [x] Keep the Forge home mark centered in the bottom navigation.
 - [ ] Add a prominent center action state for Submit or Nuke depending on the current weekly phase.
 - [x] Ensure all tappable controls meet a minimum 44x44 touch target.
 - [x] Add safe-area spacing for iPhone-style bottom navigation.
@@ -15,6 +16,7 @@
 
 - [x] Add a top-right bell icon with unread badge.
 - [x] Replace the generic Inbox route with a high-stakes alert panel.
+- [x] Render high-stakes alerts as a normal in-phone page within iOS dimensions.
 - [x] Create a mock notification feed.
 - [x] Filter the alert panel to raises, audits, and Vulture tax events.
 - [x] Add notification detail sheet.

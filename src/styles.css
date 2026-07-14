@@ -2502,7 +2502,11 @@ h3 {
 }
 
 /* Common-sense navigation and competitor context */
-.forge-bottom-nav { grid-template-columns: repeat(4, 1fr); }
+.forge-bottom-nav { grid-template-columns: repeat(5, 1fr); }
+.forge-bottom-nav .ledger-nav-button { grid-column: 1; }
+.forge-bottom-nav .forge-mark-button { grid-column: 3; grid-row: 1; }
+.forge-bottom-nav .bounties-nav-button { grid-column: 4; }
+.forge-bottom-nav .account-nav-button { grid-column: 5; }
 .forge-bottom-nav .forge-mark-button { transform: translateY(-10px); }
 .forge-mark-button small { margin-top: -1px; color: inherit; font-size: 7px; letter-spacing: 0.08em; text-transform: uppercase; }
 .forge-mark-button.active span { border-color: var(--forge-money); color: var(--forge-money); box-shadow: 0 0 18px rgba(84, 189, 124, 0.18); }
@@ -2552,5 +2556,12 @@ h3 {
 .alert-panel-item strong { color: #e6dfd0; font-size: 12px; }
 .alert-panel-item em { overflow: hidden; color: rgba(236, 232, 221, 0.52); font-size: 10px; font-style: normal; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
 .alert-panel-item > i { width: 7px; height: 7px; border-radius: 50%; background: var(--forge-danger); box-shadow: 0 0 10px rgba(217, 83, 79, 0.75); }
+
+.alerts-view { display: grid; grid-template-rows: minmax(0, 1fr); min-height: 0; padding-bottom: 78px; }
+.alert-page-card { display: grid; grid-template-rows: auto auto minmax(0, 1fr); min-height: 0; padding: 2px 0 0; overflow: hidden; }
+.alert-page-card .alert-panel-header { min-height: 61px; padding: 0 2px; }
+.alert-page-card .alert-panel-header h2 { font-size: 24px; }
+.alert-page-card .alert-panel-actions { min-height: 49px; }
+.alert-page-card .alert-panel-list { min-height: 0; padding: 0 1px 8px; overflow: auto; }
 
 @keyframes profileSlideIn { from { transform: translateX(100%); opacity: 0.55; } to { transform: translateX(0); opacity: 1; } }

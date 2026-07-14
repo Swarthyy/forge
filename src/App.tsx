@@ -36,7 +36,7 @@ import {
   type Player
 } from "./data";
 
-type MainView = "arena" | "stakes" | "profile" | "wallet";
+type MainView = "arena" | "alerts" | "stakes" | "profile" | "wallet";
 type AppTab = "home" | "ledger" | "bounties" | "account";
 type LedgerMode = "season" | "archive";
 
@@ -71,7 +71,6 @@ export function App() {
   const [submission, setSubmission] = useState("");
   const [showVault, setShowVault] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [showAlerts, setShowAlerts] = useState(false);
   const [inboxItems, setInboxItems] = useState<NotificationItem[]>(notifications);
   const [selectedNotification, setSelectedNotification] = useState<NotificationItem | null>(null);
   const [auditPlayerId, setAuditPlayerId] = useState<string | null>(null);
@@ -95,7 +94,6 @@ export function App() {
         notification.id === item.id ? { ...notification, unread: false } : notification
       )
     );
-    setShowAlerts(false);
     setSelectedNotification({ ...item, unread: false });
   };
 
@@ -147,7 +145,10 @@ export function App() {
               setView("stakes");
             }}
             onOpenVault={() => setShowVault(true)}
-            onOpenAlerts={() => setShowAlerts(true)}
+            onOpenAlerts={() => {
+              setActiveTab("home");
+              setView("alerts");
+            }}
             onOpenLedger={() => {
               setActiveTab("ledger");
               setView("arena");
@@ -170,10 +171,24 @@ export function App() {
             }}
           />
         )}
+        {view === "alerts" && (
+          <AlertPanel
+            items={highStakeAlerts}
+            unreadCount={unreadHighStakeCount}
+            selectedNotification={selectedNotification}
+            onClose={() => setView("arena")}
+            onClearSelection={() => setSelectedNotification(null)}
+            onOpen={openNotification}
+            onMarkAllRead={() => {
+              haptic(10);
+              setInboxItems((current) => current.map((item) => ({ ...item, unread: false })));
+            }}
+          />
+        )}
         {view === "stakes" && <StakesPage onClose={() => { setActiveTab("home"); setView("arena"); }} />}
         {view === "profile" && <ProfileEditView onBack={() => setView("arena")} />}
         {view === "wallet" && <WalletHistoryView onBack={() => setView("arena")} />}
-        {(view === "arena" || view === "stakes" || view === "profile" || view === "wallet") && (
+        {(view === "arena" || view === "alerts" || view === "stakes" || view === "profile" || view === "wallet") && (
           <ActiveBottomNav
             activeTab={view === "stakes" ? "bounties" : view === "profile" || view === "wallet" ? "account" : activeTab}
             onSelect={(tab) => {
@@ -186,18 +201,6 @@ export function App() {
       </section>
 
       {showVault && <VaultSheet onClose={() => setShowVault(false)} />}
-      {showAlerts && (
-        <AlertPanel
-          items={highStakeAlerts}
-          unreadCount={unreadHighStakeCount}
-          onClose={() => setShowAlerts(false)}
-          onOpen={openNotification}
-          onMarkAllRead={() => {
-            haptic(10);
-            setInboxItems((current) => current.map((item) => ({ ...item, unread: false })));
-          }}
-        />
-      )}
       {selectedPlayerId && (
         <CompetitorProfileSheet
           player={players.find((player) => player.id === selectedPlayerId) ?? players[0]}
@@ -374,10 +377,10 @@ function CompetitorProfileSheet({ player, onClose }: { player: Player; onClose: 
   );
 }
 
-function AlertPanel({ items, unreadCount, onClose, onOpen, onMarkAllRead }: { items: NotificationItem[]; unreadCount: number; onClose: () => void; onOpen: (item: NotificationItem) => void; onMarkAllRead: () => void }) {
+function AlertPanel({ items, unreadCount, selectedNotification, onClose, onClearSelection, onOpen, onMarkAllRead }: { items: NotificationItem[]; unreadCount: number; selectedNotification: NotificationItem | null; onClose: () => void; onClearSelection: () => void; onOpen: (item: NotificationItem) => void; onMarkAllRead: () => void }) {
   return (
-    <div className="sheet-backdrop alert-backdrop" onClick={onClose}>
-      <section className="alert-panel" role="dialog" aria-modal="true" aria-labelledby="alert-panel-title" onClick={(event) => event.stopPropagation()}>
+    <div className="view alerts-view">
+      <section className="alert-page-card" aria-labelledby="alert-panel-title">
         <header className="alert-panel-header"><div><p className="eyebrow">Economic event stream</p><h2 id="alert-panel-title">High-stakes alerts</h2><span>{unreadCount} unread triggers</span></div><button className="icon-button" onClick={onClose} aria-label="Close high-stakes alerts"><X size={18} /></button></header>
         <div className="alert-panel-actions"><span>Raises · audits · Vulture tax</span><button className="text-button" onClick={onMarkAllRead}>Mark all read</button></div>
         <div className="alert-panel-list">{items.map((item) => <button key={item.id} className={`alert-panel-item ${item.unread ? "unread" : ""}`} onClick={() => onOpen(item)}><span className={`notification-severity ${item.severity}`} /><span><small>{item.category} · {item.time}</small><strong>{item.title}</strong><em>{item.body}</em></span>{item.unread && <i />}<ChevronRight size={15} /></button>)}</div>
@@ -499,9 +502,9 @@ function ActiveBottomNav({
   return (
     <nav className="forge-bottom-nav" aria-label="Forge primary navigation">
       <button className={`forge-mark-button ${activeTab === "home" ? "active" : ""}`} onClick={() => onSelect("home")} aria-label="Open Forge home"><span>F</span><small>Home</small></button>
-      <button className={activeTab === "ledger" ? "active" : ""} onClick={() => onSelect("ledger")}><History size={15} /><span>The Ledger</span></button>
-      <button className={activeTab === "bounties" ? "active" : ""} onClick={() => onSelect("bounties")}><WalletCards size={15} /><span>Bounties</span></button>
-      <button className={activeTab === "account" ? "active" : ""} onClick={() => onSelect("account")}><UserRound size={15} /><span>Account</span></button>
+      <button className={`ledger-nav-button ${activeTab === "ledger" ? "active" : ""}`} onClick={() => onSelect("ledger")}><History size={15} /><span>The Ledger</span></button>
+      <button className={`bounties-nav-button ${activeTab === "bounties" ? "active" : ""}`} onClick={() => onSelect("bounties")}><WalletCards size={15} /><span>Bounties</span></button>
+      <button className={`account-nav-button ${activeTab === "account" ? "active" : ""}`} onClick={() => onSelect("account")}><UserRound size={15} /><span>Account</span></button>
     </nav>
   );
 }
