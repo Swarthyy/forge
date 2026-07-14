@@ -8,6 +8,7 @@ import {
   Gauge,
   History,
   Inbox as InboxIcon,
+  Menu,
   LockKeyhole,
   Medal,
   Radio,
@@ -17,6 +18,7 @@ import {
   Swords,
   Timer,
   UserRound,
+  UsersRound,
   Vault,
   WalletCards,
   X
@@ -30,7 +32,8 @@ import {
   type Player
 } from "./data";
 
-type MainView = "arena" | "submit" | "reveal" | "inbox";
+type MainView = "arena" | "inbox";
+type AppTab = "week" | "members" | "account";
 
 function nextSundayPrompt(now: Date) {
   const target = new Date(now);
@@ -57,9 +60,9 @@ function haptic(pattern: number | number[] = 12) {
 }
 
 export function App() {
-  const [view, setView] = useState<MainView>(
-    forgeState.phase === "submission" ? "submit" : "arena"
-  );
+  const stage = forgeState.week_stage;
+  const [view, setView] = useState<MainView>("arena");
+  const [activeTab, setActiveTab] = useState<AppTab>("week");
   const [submission, setSubmission] = useState("");
   const [showStakes, setShowStakes] = useState(false);
   const [showVault, setShowVault] = useState(false);
@@ -67,7 +70,7 @@ export function App() {
   const [inboxItems, setInboxItems] = useState<NotificationItem[]>(notifications);
   const [selectedNotification, setSelectedNotification] = useState<NotificationItem | null>(null);
   const [now, setNow] = useState(() => new Date());
-  const judged = useMemo(() => judgeWeeklyPool(players), []);
+  const judged = useMemo(() => (stage === "reveal" ? judgeWeeklyPool(players) : null), [stage]);
   const vulture = useMemo(() => calculateVultureProtocol(forgeState), []);
   const countdown = formatCountdown(nextSundayPrompt(now).getTime() - now.getTime());
 
@@ -86,14 +89,46 @@ export function App() {
     setSelectedNotification({ ...item, unread: false });
   };
 
+  if (stage === "reveal" && judged) {
+    return (
+      <main className="app-shell hard-lock-shell">
+        <RevealEngine judged={judged} />
+      </main>
+    );
+  }
+
+  if (stage === "submission") {
+    return (
+      <main className="app-shell">
+        <section className="phone-frame stage-frame">
+          <SubmissionStage
+            submission={submission}
+            setSubmission={setSubmission}
+            players={players}
+          />
+        </section>
+      </main>
+    );
+  }
+
+  if (stage === "lockout") {
+    return (
+      <main className="app-shell">
+        <section className="phone-frame stage-frame">
+          <LockoutStage vulture={vulture} />
+        </section>
+      </main>
+    );
+  }
+
   return (
     <main className="app-shell">
       <div className="ambient ambient-green" />
       <div className="ambient ambient-red" />
 
-      <section className="phone-frame">
-        {view === "arena" && (
-            <Arena
+        <section className="phone-frame active-phone">
+        {view === "arena" && activeTab === "week" && (
+          <Arena
             vulture={vulture}
             countdown={countdown}
             onOpenStakes={() => {
@@ -104,14 +139,12 @@ export function App() {
             onOpenSettings={() => setShowSettings(true)}
           />
         )}
-        {view === "submit" && (
-          <SundayPortal
-            submission={submission}
-            setSubmission={setSubmission}
-            onBack={() => setView("arena")}
-          />
+        {view === "arena" && activeTab === "members" && (
+          <MembersView players={players} onBackToWeek={() => setActiveTab("week")} />
         )}
-        {view === "reveal" && <Reveal judged={judged} onBack={() => setView("arena")} />}
+        {view === "arena" && activeTab === "account" && (
+          <AccountView onOpenSettings={() => setShowSettings(true)} />
+        )}
         {view === "inbox" && (
           <Inbox
             items={inboxItems}
@@ -120,6 +153,20 @@ export function App() {
             onMarkAllRead={() => {
               haptic(10);
               setInboxItems((current) => current.map((item) => ({ ...item, unread: false })));
+            }}
+          />
+        )}
+        {view === "arena" && (
+          <ActiveBottomNav
+            activeTab={activeTab}
+            onSelect={(tab) => {
+              if (tab === "stakes") {
+                haptic(10);
+                setShowStakes(true);
+                return;
+              }
+              haptic(8);
+              setActiveTab(tab);
             }}
           />
         )}
@@ -134,10 +181,6 @@ export function App() {
           onInbox={() => {
             setShowSettings(false);
             setView("inbox");
-          }}
-          onReveal={() => {
-            setShowSettings(false);
-            setView("reveal");
           }}
         />
       )}
@@ -223,10 +266,10 @@ function Arena({
         <div className="arena-brand">
           <p className="eyebrow">Private ring · Week {forgeState.weekId}</p>
           <h1>FORGE</h1>
-          <span><i /> Live standings</span>
+          <span><i /> Blind weekly state</span>
         </div>
-        <button className="icon-button gear-button" onClick={onOpenSettings} aria-label="Open Forge settings">
-          <Settings size={19} />
+        <button className="icon-button gear-button" onClick={onOpenSettings} aria-label="Open Forge menu">
+          <Menu size={19} />
         </button>
       </header>
 
@@ -252,45 +295,96 @@ function Arena({
       <section className="monthly-standings">
         <div className="section-title standings-title">
           <Swords size={16} />
-          <h2>Frozen monthly standings</h2>
-          <span>Week {forgeState.weekId} snapshot</span>
+          <h2>Blind weekly field</h2>
+          <span>Ranks hidden until Monday</span>
         </div>
         <div className="monthly-list">
           {[...players]
-            .sort((a, b) => a.rank - b.rank)
-            .map((player) => <MonthlyPlayerCard key={player.id} player={player} />)}
+            .sort((a, b) => a.name.localeCompare(b.name))
+            .map((player) => <BlindPlayerCard key={player.id} player={player} />)}
         </div>
       </section>
 
       <div className="arena-footnote">
-        <LockKeyhole size={12} /> Monthly points freeze at Monday reveal
+        <LockKeyhole size={12} /> Current submissions and ranks are sealed
       </div>
     </div>
   );
 }
 
-function MonthlyPlayerCard({ player }: { player: Player }) {
-  const first = player.rank === 1;
-  const last = player.rank === 5;
+function MembersView({ players, onBackToWeek }: { players: Player[]; onBackToWeek: () => void }) {
   return (
-    <article className={`monthly-player ${first ? "monthly-champion" : ""} ${last ? "monthly-basement" : ""}`}>
-      <span className="monthly-rank">{player.rank}</span>
+    <div className="view members-view">
+      <header className="secondary-header">
+        <div><p className="eyebrow">Private ring · Week {forgeState.weekId}</p><h1>Members</h1></div>
+        <span className="invite-token">+ INVITE</span>
+      </header>
+      <div className="member-column-labels"><span>Member</span><span>Stake</span><span>Recent form</span></div>
+      <div className="member-list">
+        {[...players].sort((a, b) => a.name.localeCompare(b.name)).map((player) => (
+          <BlindPlayerCard key={player.id} player={player} />
+        ))}
+      </div>
+      <button className="add-member-button" onClick={onBackToWeek}><UsersRound size={15} /> Return to This Week</button>
+    </div>
+  );
+}
+
+function AccountView({ onOpenSettings }: { onOpenSettings: () => void }) {
+  return (
+    <div className="view account-view">
+      <header className="secondary-header">
+        <div><p className="eyebrow">Forge identity</p><h1>Account</h1></div>
+        <button className="icon-button" onClick={onOpenSettings} aria-label="Open account settings"><Settings size={18} /></button>
+      </header>
+      <section className="profile-card">
+        <div className="profile-medallion">N</div>
+        <h2>NOAH</h2>
+        <span>SOFTWARE DEVELOPER · MEMBER</span>
+        <div className="profile-grid"><span>Focus<strong>Software launches</strong></span><span>Lifetime balance<strong>${players.find((player) => player.id === "noah")?.lifetimeBalance ?? 0}</strong></span><span>Member ID<strong>FORGE-042</strong></span><span>Current form<strong className="down-copy">▼ Drift</strong></span></div>
+      </section>
+      <div className="account-actions"><button><WalletCards size={16} /> Wallet history <ChevronRight size={15} /></button><button><Medal size={16} /> Career Hall of Fame <ChevronRight size={15} /></button><button><Bell size={16} /> Notifications <ChevronRight size={15} /></button></div>
+      <button className="account-edit-button" onClick={onOpenSettings}>Edit profile <ChevronRight size={15} /></button>
+    </div>
+  );
+}
+
+function ActiveBottomNav({
+  activeTab,
+  onSelect
+}: {
+  activeTab: AppTab;
+  onSelect: (tab: AppTab | "stakes") => void;
+}) {
+  return (
+    <nav className="forge-bottom-nav" aria-label="Forge primary navigation">
+      <button className={activeTab === "week" ? "active" : ""} onClick={() => onSelect("week")}><Radio size={15} /><span>This Week</span></button>
+      <button className={activeTab === "members" ? "active" : ""} onClick={() => onSelect("members")}><UsersRound size={15} /><span>Members</span></button>
+      <button className="forge-mark-button" onClick={() => onSelect("week")} aria-label="Return to Forge home"><span>F</span></button>
+      <button onClick={() => onSelect("stakes")}><WalletCards size={15} /><span>Stakes</span></button>
+      <button className={activeTab === "account" ? "active" : ""} onClick={() => onSelect("account")}><UserRound size={15} /><span>Account</span></button>
+    </nav>
+  );
+}
+
+function BlindPlayerCard({ player, secured = false }: { player: Player; secured?: boolean }) {
+  return (
+    <article className="monthly-player blind-player">
       <span className="player-avatar">{player.name.slice(0, 1)}</span>
       <div className="monthly-player-copy">
         <div className="monthly-name-line">
           <h3>{player.name}</h3>
-          {player.badge && <span className={`badge ${player.badge.toLowerCase()}`}>{player.badge}</span>}
+          {secured && player.submissionSecured && <span className="secured-badge">SECURED</span>}
         </div>
-        <span className="monthly-role">{player.role}</span>
+        <span className="monthly-role">{player.contextBaseline}</span>
+        <div className="blind-financials">
+          <span>Ante ${player.currentWeekAnte}</span>
+          <span>{player.currentWeekRaise ? `Raise +$${player.currentWeekRaise}` : "No raise"}</span>
+        </div>
       </div>
-      <span className={`monthly-velocity ${player.direction}`} aria-label={`${player.direction} velocity`}>
+      <span className={`monthly-velocity ${player.direction}`} aria-label="Previous week momentum">
         {player.direction === "up" ? "▲" : player.direction === "down" ? "▼" : "—"}
       </span>
-      <div className="monthly-points">
-        <strong>{player.points}</strong>
-        <span>pts</span>
-      </div>
-      <span className="monthly-status-line" />
     </article>
   );
 }
@@ -380,14 +474,37 @@ function StakesSheet({ onClose }: { onClose: () => void }) {
   );
 }
 
+function SubmissionStage({
+  submission,
+  setSubmission,
+  players
+}: {
+  submission: string;
+  setSubmission: (value: string) => void;
+  players: Player[];
+}) {
+  return (
+    <SundayPortal
+      submission={submission}
+      setSubmission={setSubmission}
+      players={players}
+      isolated
+    />
+  );
+}
+
 function SundayPortal({
   submission,
   setSubmission,
+  players,
+  isolated = false,
   onBack
 }: {
   submission: string;
   setSubmission: (value: string) => void;
-  onBack: () => void;
+  players: Player[];
+  isolated?: boolean;
+  onBack?: () => void;
 }) {
   const [locked, setLocked] = useState(false);
   const charsLeft = 280 - submission.length;
@@ -395,11 +512,21 @@ function SundayPortal({
   const ready = submission.trim().length >= 10;
 
   return (
-    <div className="view submission-view">
-      <CompactHeader eyebrow="Sunday 6:00 PM · submission window" title="Sunday Portal" onBack={onBack} />
+    <div className={`view submission-view ${isolated ? "isolated-submission" : ""}`}>
+      {isolated ? (
+        <header className="stage-lock-header">
+          <div>
+            <p className="eyebrow">Sunday 6:00 PM · submission window</p>
+            <h1>Sunday Portal</h1>
+          </div>
+          <span className="stage-token">BLIND MODE</span>
+        </header>
+      ) : onBack ? (
+        <CompactHeader eyebrow="Sunday 6:00 PM · submission window" title="Sunday Portal" onBack={onBack} />
+      ) : null}
       <section className="submission-intro">
         <span className="submission-live"><i /> Portal open</span>
-        <p>One milestone. One clean claim. No actions, no hours logged. The judge values outcomes over labor.</p>
+        <p>One milestone. One clean claim. No actions, no hours logged. Your text is sealed until Monday.</p>
       </section>
       <div className={`submission-input-shell ${locked ? "locked" : ""}`}>
         <textarea
@@ -427,7 +554,119 @@ function SundayPortal({
         </button>
         {!locked && !ready && <span className="minimum-copy">10 characters minimum to submit</span>}
       </div>
+      {isolated && (
+        <section className="submission-roster">
+          <div className="section-title">
+            <LockKeyhole size={14} />
+            <h2>Blind submission status</h2>
+            <span>Payloads hidden</span>
+          </div>
+          <div className="secured-roster">
+            {[...players]
+              .sort((a, b) => a.name.localeCompare(b.name))
+              .map((player) => (
+                <BlindPlayerCard
+                  key={player.id}
+                  player={{
+                    ...player,
+                    submissionSecured:
+                      player.submissionSecured ||
+                      (locked && player.id === forgeState.authenticatedUserId)
+                  }}
+                  secured
+                />
+              ))}
+          </div>
+        </section>
+      )}
     </div>
+  );
+}
+
+function LockoutStage({ vulture }: { vulture: ReturnType<typeof calculateVultureProtocol> }) {
+  return (
+    <div className="view lockout-stage">
+      <div className="stage-lock-header">
+        <div>
+          <p className="eyebrow">Sunday midnight · Monday 8:00 AM</p>
+          <h1>Submissions Sealed</h1>
+        </div>
+        <span className="stage-token">HARD LOCK</span>
+      </div>
+      <section className="lockout-card">
+        <LockKeyhole size={30} />
+        <span>Information asymmetry preserved</span>
+        <h2>The room is blind.</h2>
+        <p>All claims are encrypted and queued for the Monday Judge. Ranks, scores, and payout remain unavailable until the reveal sequence completes.</p>
+        <div className="lockout-metrics"><span>Weekly pot <strong>${forgeState.weeklyPot}</strong></span><span>Vault <strong>${vulture.vaultAfterCapture}</strong></span></div>
+      </section>
+      <div className="lockout-footer"><Radio size={14} /> Reveal unlocks Monday at 8:00 AM · bottom-up extraction</div>
+    </div>
+  );
+}
+
+function RevealEngine({ judged }: { judged: ReturnType<typeof judgeWeeklyPool> }) {
+  const revealOrder = useMemo(() => [...judged].sort((a, b) => b.rank - a.rank), [judged]);
+  const [visibleCount, setVisibleCount] = useState(0);
+  const [typedRoast, setTypedRoast] = useState("");
+  const [payoutReleased, setPayoutReleased] = useState(false);
+  const current = revealOrder[visibleCount - 1];
+
+  useEffect(() => {
+    if (visibleCount >= revealOrder.length) return;
+    const timeout = window.setTimeout(
+      () => setVisibleCount((count) => count + 1),
+      visibleCount === 0 ? 450 : 1500
+    );
+    return () => window.clearTimeout(timeout);
+  }, [revealOrder.length, visibleCount]);
+
+  useEffect(() => {
+    if (!current) {
+      setTypedRoast("");
+      return;
+    }
+
+    let cursor = 0;
+    setTypedRoast("");
+    setPayoutReleased(false);
+    const interval = window.setInterval(() => {
+      cursor += 1;
+      setTypedRoast(current.roast.slice(0, cursor));
+      if (cursor >= current.roast.length) {
+        window.clearInterval(interval);
+        if (current.rank === 1) setPayoutReleased(true);
+      }
+    }, 24);
+
+    return () => window.clearInterval(interval);
+  }, [current?.id]);
+
+  return (
+    <section className="reveal-lock-shell">
+      <div className="reveal-lock-header">
+        <div><p className="eyebrow">Monday 8:00 AM · judge execution</p><h1>The Showdown</h1></div>
+        <span className="stage-token">HARD LOCK</span>
+      </div>
+      <div className="reveal-status"><span className="reveal-pulse" /> Extracting ranks {visibleCount} / {revealOrder.length} from the basement up</div>
+      <div className="sequential-reveal-list">
+        {revealOrder.slice(0, visibleCount).map((player) => {
+          const active = player.id === current?.id;
+          return (
+            <article key={player.id} className={`sequential-card rank-${player.rank} ${active ? "reveal-active" : ""}`}>
+              <div className="sequential-card-heading"><span>Rank #{player.rank}</span><h2>{player.name}</h2><strong>{player.rankAward} pts</strong></div>
+              <p>{active ? typedRoast || "Judge commentary loading..." : player.roast}</p>
+              <small>Proof gate: {player.proofRequired}</small>
+            </article>
+          );
+        })}
+      </div>
+      {payoutReleased ? (
+        <div className="payout-climax"><Crown size={21} /><div><strong>Rank #1 payout cleared</strong><span>${forgeState.weeklyPot} transferred to the champion ledger.</span></div><Check size={21} /></div>
+      ) : (
+        <div className="payout-pending"><LockKeyhole size={14} /> Payout ledger remains locked until Rank #1 climax</div>
+      )}
+    </section>
   );
 }
 
@@ -449,13 +688,11 @@ function VaultSheet({ onClose }: { onClose: () => void }) {
 function SettingsSheet({
   unreadCount,
   onClose,
-  onInbox,
-  onReveal
+  onInbox
 }: {
   unreadCount: number;
   onClose: () => void;
   onInbox: () => void;
-  onReveal: () => void;
 }) {
   return (
     <div className="sheet-backdrop" onClick={onClose}>
@@ -470,22 +707,8 @@ function SettingsSheet({
           <button className="settings-row"><WalletCards size={19} /><span><strong>Wallet history</strong><small>$0.00 available · $420 vault protected</small></span><ChevronRight size={16} /></button>
           <button className="settings-row"><Medal size={19} /><span><strong>Career Hall of Fame</strong><small>James leads Week 3</small></span><ChevronRight size={16} /></button>
           <button className="settings-row" onClick={onInbox}><Bell size={19} /><span><strong>Inbox</strong><small>{unreadCount} unread alerts</small></span><ChevronRight size={16} /></button>
-          <button className="settings-row" onClick={onReveal}><Crown size={19} /><span><strong>Replay last reveal</strong><small>Review the Week 3 verdict</small></span><ChevronRight size={16} /></button>
         </div>
       </section>
-    </div>
-  );
-}
-
-function Reveal({ judged, onBack }: { judged: ReturnType<typeof judgeWeeklyPool>; onBack: () => void }) {
-  const winner = judged.find((player) => player.rank === 1);
-  return (
-    <div className="view compact-view">
-      <CompactHeader eyebrow="Monday 8:00 AM · completed" title="The Reveal" onBack={onBack} />
-      <section className="reveal-winner-card"><Crown size={26} /><span>Week {forgeState.weekId} champion</span><h2>{winner?.name}</h2><strong>${forgeState.weeklyPot}</strong><p>Winner-take-all payout before vault transfer.</p></section>
-      <div className="reveal-summary"><History size={17} /><span>Bottom-up extraction completed</span><span className="reveal-summary-count">5 ranks cleared</span></div>
-      <div className="compact-rank-list">{judged.slice(1, 4).map((player) => <div key={player.id}><span>#{player.rank}</span><strong>{player.name}</strong><small>{player.rankAward} pts</small></div>)}</div>
-      <button className="sheet-action" onClick={onBack}>Return to Arena</button>
     </div>
   );
 }

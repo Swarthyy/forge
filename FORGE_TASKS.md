@@ -3,8 +3,8 @@
 ## iOS app convention fixes
 
 - [x] Replace the current top navigation tabs with an iOS-style bottom tab bar.
-- [x] Use 5 primary tabs: Arena, Stakes, Submit, Reveal, Inbox.
-- [x] Add a prominent center action state for Submit or Nuke depending on the current weekly phase.
+- [x] Use 5 primary tabs: This Week, Members, Forge, Stakes, Account.
+- [ ] Add a prominent center action state for Submit or Nuke depending on the current weekly phase.
 - [x] Ensure all tappable controls meet a minimum 44x44 touch target.
 - [x] Add safe-area spacing for iPhone-style bottom navigation.
 - [x] Convert secondary actions into native-feeling bottom sheets or modal sheets.
@@ -37,7 +37,7 @@
 
 ## Pot and financial pressure UI
 
-- [ ] Replace static pot text with an animated rolling odometer display.
+- [x] Replace static pot text with an animated rolling odometer display.
 - [ ] Add pot transaction ledger.
 - [ ] Show individual pot contributions.
 - [ ] Flash green when the pot increases.
@@ -47,20 +47,15 @@
 
 ## Weekly state machine
 
-- [ ] Add global weekly phase state:
-  - [ ] Aftermath
-  - [ ] Stakes
-  - [ ] Submission
-  - [ ] Reveal
-  - [ ] Audit
-- [ ] Make the Arena home screen change based on the current weekly phase.
-- [ ] Add Monday reveal lockout state.
-- [ ] Add Sunday submission lockout state outside the allowed window.
+- [x] Add global weekly stage state: active, submission, lockout, reveal.
+- [x] Make the Arena home screen change based on the current weekly stage.
+- [x] Add Monday reveal lockout state.
+- [x] Add Sunday submission lockout state outside the allowed window.
 - [ ] Add Thursday/Saturday stakes escalation emphasis.
 
 ## Countdown pressure
 
-- [ ] Add Sunday submission countdown.
+- [x] Add Sunday submission countdown.
 - [ ] Add Monday reveal countdown.
 - [ ] Add raise-match countdown.
 - [ ] Add BS audit countdown.
@@ -69,31 +64,31 @@
 
 ## Stakes Room upgrades
 
-- [ ] Replace basic slider styling with a heavy haptic-style bet slider.
-- [ ] Add browser vibration/haptic abstraction for web prototype.
+- [x] Replace basic slider styling with a heavy haptic-style bet slider.
+- [x] Add browser vibration/haptic abstraction for web prototype.
 - [ ] Add rising visual intensity as the raise amount increases.
-- [ ] Add hold-to-nuke button with 2-second progress ring.
-- [ ] Add nuke confirmation state.
+- [x] Add hold-to-nuke button with 2-second progress ring.
+- [x] Add nuke confirmation state.
 - [ ] Add matched/pending/folded states for every player.
 - [ ] Add urgent mock notification after nuke activation.
 
 ## Sunday Portal upgrades
 
-- [ ] Enforce 280-character limit visually and functionally.
-- [ ] Add submission quality hints focused on outcomes over effort.
+- [x] Enforce 280-character limit visually and functionally.
+- [x] Add submission quality hints focused on outcomes over effort.
 - [ ] Add “fluff warning” mock detector for effort-heavy submissions.
-- [ ] Add locked submission receipt.
-- [ ] Add “not submitted” danger state.
-- [ ] Add character countdown severity styling.
+- [x] Add locked submission receipt.
+- [x] Add “not submitted” danger state.
+- [x] Add character countdown severity styling.
 
 ## Monday Reveal upgrades
 
-- [ ] Animate bottom-up rank reveal from #5 to #1.
+- [x] Animate bottom-up rank reveal from #5 to #1.
 - [ ] Add final duo showdown state for ranks #2 and #1.
 - [ ] Add winner explosion visual.
 - [ ] Add rank-specific audio/haptic abstraction hooks.
-- [ ] Add winner payout transfer animation.
-- [ ] Add roast typing animation.
+- [x] Add winner payout transfer animation.
+- [x] Add roast typing animation.
 - [ ] Add reveal completion summary screen.
 
 ## Rank punishment and status effects

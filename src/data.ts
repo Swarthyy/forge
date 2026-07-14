@@ -1,5 +1,6 @@
 export type RankDirection = "up" | "flat" | "down";
 export type PerformanceSignal = "elite" | "strong" | "slump" | "fraud-risk";
+export type WeekStage = "active" | "submission" | "lockout" | "reveal";
 export type WeeklyPhase = "aftermath" | "stakes" | "submission" | "reveal" | "audit";
 export type NotificationCategory = "Stakes" | "Submissions" | "Roasts" | "System" | "BS Audits";
 export type EventSeverity = "green" | "neutral" | "red" | "gold";
@@ -14,7 +15,11 @@ export type Player = {
   name: string;
   role: string;
   lane: BusinessLane;
+  contextBaseline: string;
   evaluationRule: string;
+  currentWeekAnte: number;
+  currentWeekRaise: number;
+  submissionSecured: boolean;
   rank: number;
   points: number;
   lifetimeBalance: number;
@@ -35,6 +40,7 @@ export type ForgeState = {
   vultureTaxRate: number;
   bsAuditWindowHours: number;
   authenticatedUserId: string;
+  week_stage: WeekStage;
   phase: WeeklyPhase;
   phaseEndsAt: string;
   revealStartsAt: string;
@@ -80,6 +86,7 @@ export const forgeState: ForgeState = {
   vultureTaxRate: 0.3,
   bsAuditWindowHours: 2,
   authenticatedUserId: "noah",
+  week_stage: "active",
   phase: "stakes",
   phaseEndsAt: "Thu 11:59 PM",
   revealStartsAt: "Mon 8:00 AM",
@@ -95,8 +102,12 @@ export const players: Player[] = [
     name: "James",
     role: "Media / Music Operator",
     lane: "music-distribution",
+    contextBaseline: "Media distribution / music operator",
     evaluationRule:
       "Judge on media distribution metrics, streaming velocity, pre-sales, brand deal value, and audience growth that compounds.",
+    currentWeekAnte: 50,
+    currentWeekRaise: 150,
+    submissionSecured: true,
     rank: 1,
     points: 175,
     lifetimeBalance: 2100,
@@ -118,8 +129,12 @@ export const players: Player[] = [
     name: "Angus",
     role: "Agency Video Director",
     lane: "agency-retainers",
+    contextBaseline: "Recurring agency retainers",
     evaluationRule:
       "Judge on recurring retainer value, signed production contracts, expansion revenue, and client acquisition.",
+    currentWeekAnte: 50,
+    currentWeekRaise: 150,
+    submissionSecured: true,
     rank: 2,
     points: 150,
     lifetimeBalance: 850,
@@ -140,8 +155,12 @@ export const players: Player[] = [
     name: "Jett",
     role: "Skool Community Operator",
     lane: "skool-members",
+    contextBaseline: "Net-new $30/mo Skool members",
     evaluationRule:
       "Judge strictly on net-new $30/mo paying Skool members, churn reduction, conversion assets, and community revenue.",
+    currentWeekAnte: 50,
+    currentWeekRaise: 0,
+    submissionSecured: true,
     rank: 3,
     points: 100,
     lifetimeBalance: 400,
@@ -162,8 +181,12 @@ export const players: Player[] = [
     name: "Ollie",
     role: "Software Builder",
     lane: "software-launches",
+    contextBaseline: "Software launch deployments",
     evaluationRule:
       "Judge on deployed software, active users, production usage, shipped integrations, and launch milestones. Ignore hours coded.",
+    currentWeekAnte: 50,
+    currentWeekRaise: 0,
+    submissionSecured: false,
     rank: 4,
     points: 75,
     lifetimeBalance: 50,
@@ -184,8 +207,12 @@ export const players: Player[] = [
     name: "Noah",
     role: "Software Developer",
     lane: "software-launches",
+    contextBaseline: "Software launch deployments",
     evaluationRule:
       "Judge on deployment milestones, shipped product surfaces, production users, and revenue-adjacent software outcomes. Penalize hours logged coding.",
+    currentWeekAnte: 50,
+    currentWeekRaise: 0,
+    submissionSecured: false,
     rank: 5,
     points: 25,
     lifetimeBalance: 0,
