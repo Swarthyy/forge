@@ -26,14 +26,19 @@ import {
 import { calculateVultureProtocol, judgeWeeklyPool } from "./aiJudge";
 import {
   forgeState,
+  archiveWeeks,
   notifications,
   players,
+  seasonStandings,
+  walletTransactions,
+  type ArchiveEvidenceType,
   type NotificationItem,
   type Player
 } from "./data";
 
-type MainView = "arena" | "inbox" | "stakes" | "profile";
-type AppTab = "week" | "members" | "stakes" | "account";
+type MainView = "arena" | "inbox" | "stakes" | "profile" | "wallet";
+type AppTab = "week" | "ledger" | "stakes" | "account";
+type LedgerMode = "season" | "archive";
 
 function nextSundayPrompt(now: Date) {
   const target = new Date(now);
@@ -68,6 +73,7 @@ export function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [inboxItems, setInboxItems] = useState<NotificationItem[]>(notifications);
   const [selectedNotification, setSelectedNotification] = useState<NotificationItem | null>(null);
+  const [auditPlayerId, setAuditPlayerId] = useState<string | null>(null);
   const [now, setNow] = useState(() => new Date());
   const judged = useMemo(() => (stage === "reveal" ? judgeWeeklyPool(players) : null), [stage]);
   const vulture = useMemo(() => calculateVultureProtocol(forgeState), []);
@@ -137,14 +143,20 @@ export function App() {
             }}
             onOpenVault={() => setShowVault(true)}
             onOpenSettings={() => setShowSettings(true)}
+            onOpenLedger={() => {
+              setActiveTab("ledger");
+              setView("arena");
+            }}
+            auditPlayerId={auditPlayerId}
           />
         )}
-        {view === "arena" && activeTab === "members" && (
-          <MembersView players={players} onBackToWeek={() => setActiveTab("week")} />
+        {view === "arena" && activeTab === "ledger" && (
+          <LedgerView onTriggerAudit={setAuditPlayerId} auditPlayerId={auditPlayerId} />
         )}
         {view === "arena" && activeTab === "account" && (
           <AccountView
             onOpenSettings={() => setShowSettings(true)}
+            onOpenWallet={() => setView("wallet")}
             onOpenProfileEdit={() => {
               setActiveTab("account");
               setView("profile");
@@ -153,6 +165,7 @@ export function App() {
         )}
         {view === "stakes" && <StakesPage onClose={() => { setActiveTab("week"); setView("arena"); }} />}
         {view === "profile" && <ProfileEditView onBack={() => setView("arena")} />}
+        {view === "wallet" && <WalletHistoryView onBack={() => setView("arena")} />}
         {view === "inbox" && (
           <Inbox
             items={inboxItems}
@@ -164,9 +177,9 @@ export function App() {
             }}
           />
         )}
-        {(view === "arena" || view === "stakes" || view === "profile") && (
+        {(view === "arena" || view === "stakes" || view === "profile" || view === "wallet") && (
           <ActiveBottomNav
-            activeTab={view === "stakes" ? "stakes" : view === "profile" ? "account" : activeTab}
+            activeTab={view === "stakes" ? "stakes" : view === "profile" || view === "wallet" ? "account" : activeTab}
             onSelect={(tab) => {
               haptic(8);
               setView(tab === "stakes" ? "stakes" : "arena");
@@ -255,13 +268,17 @@ function Arena({
   countdown,
   onOpenStakes,
   onOpenVault,
-  onOpenSettings
+  onOpenSettings,
+  onOpenLedger,
+  auditPlayerId
 }: {
   vulture: ReturnType<typeof calculateVultureProtocol>;
   countdown: string;
   onOpenStakes: () => void;
   onOpenVault: () => void;
   onOpenSettings: () => void;
+  onOpenLedger: () => void;
+  auditPlayerId: string | null;
 }) {
   return (
     <div className="view arena-view">
@@ -301,6 +318,9 @@ function Arena({
       </section>
 
       <section className="monthly-standings">
+        {auditPlayerId && (
+          <div className="audit-warning-banner"><ShieldAlert size={14} /><span><strong>BS AUDIT LIVE</strong> Evidence review requested for {players.find((player) => player.id === auditPlayerId)?.name ?? "member"}.</span><button onClick={onOpenLedger}>Open The Ledger</button></div>
+        )}
         <div className="section-title standings-title">
           <Swords size={16} />
           <h2>Blind weekly field</h2>
@@ -338,7 +358,60 @@ function MembersView({ players, onBackToWeek }: { players: Player[]; onBackToWee
   );
 }
 
-function AccountView({ onOpenSettings, onOpenProfileEdit }: { onOpenSettings: () => void; onOpenProfileEdit: () => void }) {
+function LedgerView({ onTriggerAudit, auditPlayerId }: { onTriggerAudit: (playerId: string | null) => void; auditPlayerId: string | null }) {
+  const [mode, setMode] = useState<LedgerMode>("season");
+  const [selectedWeekId, setSelectedWeekId] = useState<number | null>(null);
+  const [openEntryId, setOpenEntryId] = useState<string | null>(null);
+  const selectedWeek = archiveWeeks.find((week) => week.weekId === selectedWeekId) ?? null;
+
+  return (
+    <div className="view ledger-view">
+      <header className="secondary-header">
+        <div><p className="eyebrow">Historical memory · private ring</p><h1>The Ledger</h1></div>
+        <span className="invite-token">WEEKS 1–2</span>
+      </header>
+      <div className="ledger-segment-control" role="tablist" aria-label="Ledger view">
+        <button className={mode === "season" ? "active" : ""} onClick={() => setMode("season")}>Monthly Season</button>
+        <button className={mode === "archive" ? "active" : ""} onClick={() => setMode("archive")}>Archive</button>
+      </div>
+      {mode === "season" ? <SeasonLeaderboard /> : <div className="archive-browser">
+        <div className="archive-week-list">
+          {archiveWeeks.map((week) => <button key={week.weekId} className={`archive-week-row ${selectedWeekId === week.weekId ? "active" : ""}`} onClick={() => { setSelectedWeekId(selectedWeekId === week.weekId ? null : week.weekId); setOpenEntryId(null); }}><span>W{week.weekId}</span><strong>{week.label.replace(`Week ${week.weekId} · `, "")}</strong><small>${week.pot} pot</small><ChevronRight size={15} /></button>)}
+        </div>
+        {selectedWeek ? <ArchiveWeekDetail week={selectedWeek} openEntryId={openEntryId} setOpenEntryId={setOpenEntryId} auditPlayerId={auditPlayerId} onTriggerAudit={onTriggerAudit} /> : <div className="archive-empty"><History size={22} /><strong>Select a settled week</strong><span>Review achievements, judge commentary, and verification proof.</span></div>}
+      </div>}
+    </div>
+  );
+}
+
+function SeasonLeaderboard() {
+  return (
+    <div className="season-board">
+      <div className="season-banner"><div><span>Vulture Vault cleanout</span><strong>${forgeState.vultureVaultBalance}</strong></div><small>Monthly champion clears the vault</small></div>
+      <div className="season-column-labels"><span>Rank · member</span><span>Points</span><span>Trend</span></div>
+      <div className="season-standing-list">{[...seasonStandings].sort((a, b) => b.cumulativePoints - a.cumulativePoints).map((standing, index) => { const player = players.find((candidate) => candidate.id === standing.playerId)!; return <article key={standing.playerId} className={`season-standing rank-${index + 1}`}><span className="season-rank">{index + 1}</span><span className="player-avatar">{player.name.slice(0, 1)}</span><div><strong>{player.name}</strong><small>{standing.weeksWon ? `${standing.weeksWon} week${standing.weeksWon > 1 ? "s" : ""} won` : "Chasing first"}</small></div><b>{standing.cumulativePoints}</b><span className={`monthly-velocity ${standing.trend}`}>{standing.trend === "up" ? "▲" : standing.trend === "down" ? "▼" : "—"}</span></article>; })}</div>
+      <div className="season-footer"><Crown size={14} /> Loser's Dinner: rank #5 at month close</div>
+    </div>
+  );
+}
+
+function ArchiveWeekDetail({ week, openEntryId, setOpenEntryId, auditPlayerId, onTriggerAudit }: { week: typeof archiveWeeks[number]; openEntryId: string | null; setOpenEntryId: (id: string | null) => void; auditPlayerId: string | null; onTriggerAudit: (playerId: string | null) => void }) {
+  const winner = players.find((player) => player.id === week.winnerId);
+  return (
+    <section className="archive-detail">
+      <div className="archive-detail-heading"><div><span className="eyebrow">Settled · ${week.pot} weekly pot</span><h2>{winner?.name} took ${week.winnerPayout}</h2></div><button className="icon-button" onClick={() => setOpenEntryId(null)} aria-label="Close archive detail"><X size={16} /></button></div>
+      <div className="archive-entry-list">{[...week.entries].sort((a, b) => a.rank - b.rank).map((entry) => { const player = players.find((candidate) => candidate.id === entry.playerId)!; const entryId = `${week.weekId}-${entry.playerId}`; const open = openEntryId === entryId; const audited = auditPlayerId === entry.playerId; return <article key={entryId} className={`archive-entry ${open ? "open" : ""} ${audited ? "audit-live" : ""}`}><button className="archive-entry-toggle" onClick={() => setOpenEntryId(open ? null : entryId)}><span>#{entry.rank}</span><strong>{player.name}</strong><small>{entry.points} pts</small><ChevronRight size={14} /></button>{open && <div className="archive-entry-expanded"><p className="archive-achievement">“{entry.achievement}”</p><p className="archive-commentary"><span>AI JUDGE</span>{entry.commentary}</p><div className="evidence-row"><img src={buildEvidenceAsset(entry.evidenceType, entry.evidenceLabel)} alt={`${entry.evidenceLabel} verification preview`} /><div><strong>{entry.evidenceLabel}</strong><small>Submitted {entry.submittedAt}</small><button className={audited ? "audit-vote active" : "audit-vote"} onClick={() => onTriggerAudit(audited ? null : entry.playerId)}><ShieldAlert size={13} /> {audited ? "Audit live" : "BS Vote"}</button></div></div></div>}</article>; })}</div>
+    </section>
+  );
+}
+
+function buildEvidenceAsset(type: ArchiveEvidenceType, label: string) {
+  const accent = type === "revenue" || type === "contract" ? "%2354bd7c" : type === "members" ? "%23b9aa88" : "%23d6a75d";
+  const safeLabel = encodeURIComponent(label.slice(0, 22));
+  return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='96' viewBox='0 0 160 96'%3E%3Crect width='160' height='96' rx='10' fill='%23181918'/%3E%3Cpath d='M12 72h136' stroke='%23333431'/%3E%3Cpath d='M18 64l20-18 16 9 21-25 19 13 24-20 18 12' fill='none' stroke='${accent}' stroke-width='3'/%3E%3Ccircle cx='126' cy='35' r='7' fill='${accent}'/%3E%3Ctext x='12' y='18' fill='%23e6dfd0' font-size='8' font-family='Arial'%3E${safeLabel}%3C/text%3E%3Ctext x='12' y='87' fill='%237f857d' font-size='7' font-family='Arial'%3EVERIFICATION PREVIEW%3C/text%3E%3C/svg%3E`;
+}
+
+function AccountView({ onOpenSettings, onOpenProfileEdit, onOpenWallet }: { onOpenSettings: () => void; onOpenProfileEdit: () => void; onOpenWallet: () => void }) {
   return (
     <div className="view account-view">
       <header className="secondary-header">
@@ -351,8 +424,21 @@ function AccountView({ onOpenSettings, onOpenProfileEdit }: { onOpenSettings: ()
         <span>SOFTWARE DEVELOPER · MEMBER</span>
         <div className="profile-grid"><span>Focus<strong>Software launches</strong></span><span>Lifetime balance<strong>${players.find((player) => player.id === "noah")?.lifetimeBalance ?? 0}</strong></span><span>Member ID<strong>FORGE-042</strong></span><span>Current form<strong className="down-copy">▼ Drift</strong></span></div>
       </section>
-      <div className="account-actions"><button><WalletCards size={16} /> Wallet history <ChevronRight size={15} /></button><button><Medal size={16} /> Career Hall of Fame <ChevronRight size={15} /></button><button><Bell size={16} /> Notifications <ChevronRight size={15} /></button></div>
+      <div className="account-actions"><button onClick={onOpenWallet}><WalletCards size={16} /> Wallet history <ChevronRight size={15} /></button><button><Medal size={16} /> Career Hall of Fame <ChevronRight size={15} /></button><button><Bell size={16} /> Notifications <ChevronRight size={15} /></button></div>
       <button className="account-edit-button" onClick={onOpenProfileEdit}>Edit profile <ChevronRight size={15} /></button>
+    </div>
+  );
+}
+
+function WalletHistoryView({ onBack }: { onBack: () => void }) {
+  const credits = walletTransactions.filter((transaction) => transaction.direction === "credit").reduce((sum, transaction) => sum + transaction.amount, 0);
+  const debits = walletTransactions.filter((transaction) => transaction.direction === "debit").reduce((sum, transaction) => sum + transaction.amount, 0);
+  return (
+    <div className="view wallet-view">
+      <CompactHeader eyebrow="Account · Stripe-connected ledger" title="Wallet History" onBack={onBack} />
+      <div className="wallet-summary"><div><span>Credits</span><strong>+${credits.toFixed(2)}</strong></div><div><span>Deductions</span><strong>-${debits.toFixed(2)}</strong></div><div><span>Liquid balance</span><strong>${(credits - debits).toFixed(2)}</strong></div></div>
+      <div className="wallet-list">{walletTransactions.map((transaction) => <article key={transaction.id} className={`wallet-row ${transaction.direction}`}><span className="wallet-row-icon">{transaction.direction === "credit" ? "↑" : "↓"}</span><div><strong>{transaction.label}</strong><small>{transaction.detail}</small><em>{transaction.time} · {transaction.status}</em></div><b>{transaction.direction === "credit" ? "+" : "-"}${transaction.amount.toFixed(2)}</b></article>)}</div>
+      <p className="wallet-fee-note"><WalletCards size={13} /> Estimates include Stripe processing fees; final bank settlement may vary by payment method.</p>
     </div>
   );
 }
@@ -362,12 +448,12 @@ function ActiveBottomNav({
   onSelect
 }: {
   activeTab: AppTab;
-  onSelect: (tab: AppTab | "stakes") => void;
+  onSelect: (tab: AppTab) => void;
 }) {
   return (
     <nav className="forge-bottom-nav" aria-label="Forge primary navigation">
       <button className={activeTab === "week" ? "active" : ""} onClick={() => onSelect("week")}><Radio size={15} /><span>This Week</span></button>
-      <button className={activeTab === "members" ? "active" : ""} onClick={() => onSelect("members")}><UsersRound size={15} /><span>Members</span></button>
+      <button className={activeTab === "ledger" ? "active" : ""} onClick={() => onSelect("ledger")}><History size={15} /><span>The Ledger</span></button>
       <button className="forge-mark-button" onClick={() => onSelect("week")} aria-label="Return to Forge home"><span>F</span></button>
       <button onClick={() => onSelect("stakes")}><WalletCards size={15} /><span>Stakes</span></button>
       <button className={activeTab === "account" ? "active" : ""} onClick={() => onSelect("account")}><UserRound size={15} /><span>Account</span></button>

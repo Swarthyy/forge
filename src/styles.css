@@ -2350,6 +2350,152 @@ h3 {
   background: var(--forge-champagne);
 }
 
+.ledger-view {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: 10px;
+}
+
+.ledger-segment-control {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 3px;
+  border: 1px solid rgba(185, 170, 136, 0.17);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.ledger-segment-control button {
+  min-height: 34px;
+  border: 0;
+  border-radius: 9px;
+  color: rgba(236, 232, 221, 0.38);
+  background: transparent;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ledger-segment-control button.active {
+  color: #101210;
+  background: var(--forge-champagne);
+}
+
+.season-board,
+.archive-browser {
+  min-height: 0;
+}
+
+.season-board {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.season-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border: 1px solid rgba(185, 170, 136, 0.18);
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(185, 170, 136, 0.11), rgba(255, 255, 255, 0.025));
+}
+
+.season-banner div { display: grid; gap: 3px; }
+.season-banner span { color: rgba(236, 232, 221, 0.46); font-size: 8px; letter-spacing: 0.1em; text-transform: uppercase; }
+.season-banner strong { color: var(--forge-money); font-size: 20px; font-weight: 500; }
+.season-banner small { color: var(--forge-champagne-soft); font-size: 9px; }
+
+.season-column-labels {
+  display: grid;
+  grid-template-columns: 1fr 55px 38px;
+  padding: 0 10px;
+  color: rgba(236, 232, 221, 0.28);
+  font-size: 8px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.season-standing-list { display: grid; grid-template-rows: repeat(5, minmax(0, 1fr)); gap: 5px; min-height: 0; }
+.season-standing { display: grid; grid-template-columns: 20px 30px minmax(0, 1fr) 42px 20px; align-items: center; gap: 8px; min-height: 0; padding: 0 10px; border: 1px solid rgba(185, 170, 136, 0.12); border-radius: 13px; background: rgba(255, 255, 255, 0.035); }
+.season-standing.rank-1 { border-color: rgba(185, 170, 136, 0.45); background: rgba(185, 170, 136, 0.08); }
+.season-rank { color: var(--forge-champagne); font-family: Georgia, "Times New Roman", serif; font-size: 14px; }
+.season-standing .player-avatar { width: 26px; height: 26px; border-radius: 50%; }
+.season-standing div { display: grid; gap: 3px; min-width: 0; }
+.season-standing strong { color: #e6dfd0; font-size: 12px; text-transform: uppercase; }
+.season-standing small { overflow: hidden; color: rgba(236, 232, 221, 0.34); font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
+.season-standing b { color: var(--forge-money); font-size: 14px; font-weight: 500; text-align: right; }
+.season-standing .monthly-velocity { font-size: 16px; }
+.season-footer { display: flex; align-items: center; justify-content: center; gap: 6px; color: rgba(236, 232, 221, 0.32); font-size: 9px; }
+.season-footer svg { color: var(--forge-champagne); }
+
+.archive-browser { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8px; }
+.archive-week-list { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.archive-week-row { display: grid; grid-template-columns: 25px minmax(0, 1fr) 15px; grid-template-rows: 1fr 1fr; align-items: center; column-gap: 6px; min-height: 53px; padding: 7px 9px; border: 1px solid rgba(185, 170, 136, 0.14); border-radius: 13px; color: inherit; background: rgba(255, 255, 255, 0.035); text-align: left; }
+.archive-week-row.active { border-color: var(--forge-champagne); background: rgba(185, 170, 136, 0.1); }
+.archive-week-row > span { grid-row: 1 / span 2; color: var(--forge-champagne); font-family: Georgia, "Times New Roman", serif; font-size: 16px; }
+.archive-week-row strong { overflow: hidden; font-size: 9px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.archive-week-row small { color: rgba(236, 232, 221, 0.32); font-size: 8px; }
+.archive-week-row svg { grid-column: 3; grid-row: 1 / span 2; color: rgba(236, 232, 221, 0.34); }
+
+.archive-detail { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 7px; min-height: 0; padding: 9px; border: 1px solid rgba(185, 170, 136, 0.19); border-radius: 15px; background: rgba(255, 255, 255, 0.025); }
+.archive-detail-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.archive-detail-heading h2 { margin: 3px 0 0; font-size: 17px; }
+.archive-entry-list { display: grid; align-content: start; gap: 4px; min-height: 0; overflow: hidden; }
+.archive-entry { border: 1px solid rgba(185, 170, 136, 0.1); border-radius: 10px; background: rgba(255, 255, 255, 0.035); }
+.archive-entry.audit-live { border-color: var(--forge-danger); animation: auditPulse 1100ms ease-in-out infinite; }
+.archive-entry-toggle { display: grid; grid-template-columns: 24px minmax(0, 1fr) 45px 16px; align-items: center; gap: 6px; width: 100%; min-height: 34px; padding: 0 8px; border: 0; color: inherit; background: transparent; text-align: left; }
+.archive-entry-toggle > span { color: var(--forge-champagne); font-family: Georgia, "Times New Roman", serif; }
+.archive-entry-toggle strong { overflow: hidden; font-size: 10px; text-transform: uppercase; text-overflow: ellipsis; white-space: nowrap; }
+.archive-entry-toggle small { color: var(--forge-money); font-size: 9px; text-align: right; }
+.archive-entry-toggle svg { color: rgba(236, 232, 221, 0.3); transition: transform 160ms ease; }
+.archive-entry.open .archive-entry-toggle svg { transform: rotate(90deg); }
+.archive-entry-expanded { display: grid; grid-template-columns: 1fr; gap: 6px; padding: 0 8px 8px 32px; }
+.archive-achievement { margin: 0; color: rgba(236, 232, 221, 0.72); font-size: 10px; line-height: 1.3; }
+.archive-commentary { display: grid; gap: 2px; margin: 0; color: rgba(236, 232, 221, 0.42); font-size: 9px; line-height: 1.3; }
+.archive-commentary span { color: var(--forge-champagne); font-size: 8px; letter-spacing: 0.1em; }
+.evidence-row { display: grid; grid-template-columns: 78px 1fr; align-items: center; gap: 8px; padding-top: 4px; border-top: 1px solid rgba(185, 170, 136, 0.1); }
+.evidence-row img { width: 78px; height: 48px; border-radius: 8px; object-fit: cover; }
+.evidence-row > div { display: grid; gap: 3px; min-width: 0; }
+.evidence-row strong { overflow: hidden; color: #e6dfd0; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.evidence-row small { color: rgba(236, 232, 221, 0.32); font-size: 8px; }
+.audit-vote { display: inline-flex; align-items: center; justify-content: center; gap: 4px; width: fit-content; min-height: 26px; padding: 3px 7px; border: 1px solid rgba(217, 83, 79, 0.45); border-radius: 7px; color: var(--forge-danger); background: transparent; font-size: 8px; letter-spacing: 0.08em; text-transform: uppercase; }
+.audit-vote.active { color: #fff; background: var(--forge-danger); }
+.archive-empty { display: grid; place-items: center; align-content: center; gap: 8px; min-height: 0; border: 1px dashed rgba(185, 170, 136, 0.18); border-radius: 15px; color: rgba(236, 232, 221, 0.32); text-align: center; }
+.archive-empty svg { color: var(--forge-champagne); }
+.archive-empty strong { color: #e6dfd0; font-size: 13px; }
+.archive-empty span { max-width: 190px; font-size: 9px; line-height: 1.4; }
+
+.audit-warning-banner { display: flex; align-items: center; gap: 7px; padding: 7px 9px; border: 1px solid var(--forge-danger); border-radius: 9px; color: #fff; background: rgba(217, 83, 79, 0.14); animation: auditPulse 1100ms ease-in-out infinite; }
+.audit-warning-banner svg { flex: 0 0 auto; color: var(--forge-danger); }
+.audit-warning-banner span { display: grid; gap: 2px; min-width: 0; font-size: 9px; }
+.audit-warning-banner strong { color: var(--forge-danger); font-size: 8px; letter-spacing: 0.1em; }
+.audit-warning-banner small { margin-left: auto; color: var(--forge-champagne); font-size: 8px; white-space: nowrap; }
+.audit-warning-banner button { margin-left: auto; border: 0; padding: 0; color: var(--forge-champagne); background: transparent; font: inherit; font-size: 8px; white-space: nowrap; cursor: pointer; }
+
+.wallet-view { display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto; gap: 10px; }
+.wallet-summary { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid rgba(185, 170, 136, 0.17); border-radius: 13px; background: rgba(255, 255, 255, 0.035); }
+.wallet-summary div { display: grid; gap: 4px; padding: 10px 8px; border-right: 1px solid rgba(185, 170, 136, 0.12); }
+.wallet-summary div:last-child { border-right: 0; }
+.wallet-summary span { color: rgba(236, 232, 221, 0.32); font-size: 8px; text-transform: uppercase; }
+.wallet-summary strong { color: var(--forge-money); font-size: 12px; font-weight: 500; }
+.wallet-summary div:nth-child(2) strong { color: var(--forge-danger); }
+.wallet-list { display: grid; align-content: start; gap: 5px; min-height: 0; overflow: hidden; }
+.wallet-row { display: grid; grid-template-columns: 25px minmax(0, 1fr) auto; align-items: center; gap: 7px; min-height: 51px; padding: 6px 8px; border: 1px solid rgba(185, 170, 136, 0.12); border-radius: 11px; background: rgba(255, 255, 255, 0.035); }
+.wallet-row-icon { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; color: var(--forge-money); background: rgba(84, 189, 124, 0.12); font-size: 15px; }
+.wallet-row.debit .wallet-row-icon { color: var(--forge-danger); background: rgba(217, 83, 79, 0.12); }
+.wallet-row div { display: grid; gap: 2px; min-width: 0; }
+.wallet-row strong { overflow: hidden; color: #e6dfd0; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.wallet-row small { overflow: hidden; color: rgba(236, 232, 221, 0.36); font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
+.wallet-row em { color: rgba(236, 232, 221, 0.24); font-size: 8px; font-style: normal; text-transform: capitalize; }
+.wallet-row b { color: var(--forge-money); font-size: 11px; font-weight: 500; }
+.wallet-row.debit b { color: var(--forge-danger); }
+.wallet-fee-note { display: flex; align-items: center; gap: 6px; margin: 0; color: rgba(236, 232, 221, 0.29); font-size: 8px; line-height: 1.35; }
+.wallet-fee-note svg { flex: 0 0 auto; color: var(--forge-champagne); }
+
+@keyframes auditPulse { 0%, 100% { box-shadow: 0 0 0 rgba(217, 83, 79, 0); } 50% { box-shadow: 0 0 16px rgba(217, 83, 79, 0.26); } }
+
 @keyframes metallicAura {
   0%, 100% { box-shadow: 0 0 34px rgba(185,170,136,0.06), inset 0 1px rgba(255,255,255,0.06); }
   50% { box-shadow: 0 0 50px rgba(185,170,136,0.12), inset 0 1px rgba(255,255,255,0.1); }

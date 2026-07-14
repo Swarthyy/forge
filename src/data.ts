@@ -78,6 +78,45 @@ export type PotTransaction = {
   time: string;
 };
 
+export type SeasonStanding = {
+  playerId: string;
+  cumulativePoints: number;
+  weeksWon: number;
+  trend: RankDirection;
+};
+
+export type ArchiveEvidenceType = "revenue" | "contract" | "members" | "deployment" | "analytics";
+
+export type ArchiveEntry = {
+  playerId: string;
+  rank: number;
+  points: number;
+  achievement: string;
+  commentary: string;
+  evidenceType: ArchiveEvidenceType;
+  evidenceLabel: string;
+  submittedAt: string;
+};
+
+export type WeekArchive = {
+  weekId: number;
+  label: string;
+  pot: number;
+  winnerId: string;
+  winnerPayout: number;
+  entries: ArchiveEntry[];
+};
+
+export type WalletTransaction = {
+  id: string;
+  label: string;
+  detail: string;
+  amount: number;
+  direction: "credit" | "debit";
+  status: "settled" | "held" | "released";
+  time: string;
+};
+
 export const forgeState: ForgeState = {
   weekId: 3,
   weeklyPot: 650,
@@ -229,6 +268,144 @@ export const players: Player[] = [
     roast:
       "Noah submitted a timesheet with cologne on it. Hours are not outcomes. This is regression dressed as grind."
   }
+];
+
+export const seasonStandings: SeasonStanding[] = [
+  { playerId: "james", cumulativePoints: 325, weeksWon: 2, trend: "up" },
+  { playerId: "angus", cumulativePoints: 250, weeksWon: 0, trend: "flat" },
+  { playerId: "jett", cumulativePoints: 175, weeksWon: 0, trend: "up" },
+  { playerId: "ollie", cumulativePoints: 150, weeksWon: 0, trend: "flat" },
+  { playerId: "noah", cumulativePoints: 125, weeksWon: 1, trend: "down" }
+];
+
+export const archiveWeeks: WeekArchive[] = [
+  {
+    weekId: 2,
+    label: "Week 2 · Sponsorship pressure",
+    pot: 500,
+    winnerId: "james",
+    winnerPayout: 350,
+    entries: [
+      {
+        playerId: "james",
+        rank: 1,
+        points: 100,
+        achievement: "Closed a $4,000 sponsorship package and converted the campaign into a three-month distribution deal.",
+        commentary: "James submitted a signed commercial outcome with a compounding distribution path. Clean win.",
+        evidenceType: "contract",
+        evidenceLabel: "Signed sponsorship agreement",
+        submittedAt: "Sun 8:42 PM"
+      },
+      {
+        playerId: "angus",
+        rank: 2,
+        points: 75,
+        achievement: "Booked three qualified agency sales calls with a repeatable outbound sequence.",
+        commentary: "Useful pipeline, but calls are still upstream of cash. Strong movement, incomplete conversion.",
+        evidenceType: "analytics",
+        evidenceLabel: "Outbound pipeline snapshot",
+        submittedAt: "Sun 9:03 PM"
+      },
+      {
+        playerId: "jett",
+        rank: 4,
+        points: 25,
+        achievement: "Reposted archive content and drafted a new community welcome sequence.",
+        commentary: "Activity dressed as leverage. No net-new paid members, no meaningful scoreboard impact.",
+        evidenceType: "members",
+        evidenceLabel: "Community member dashboard",
+        submittedAt: "Sun 10:18 PM"
+      },
+      {
+        playerId: "ollie",
+        rank: 3,
+        points: 50,
+        achievement: "Added an authentication flow and onboarded two private beta testers.",
+        commentary: "A real shipped surface, though still trapped behind a private beta wall.",
+        evidenceType: "deployment",
+        evidenceLabel: "Private beta deployment log",
+        submittedAt: "Sun 7:29 PM"
+      },
+      {
+        playerId: "noah",
+        rank: 5,
+        points: 0,
+        achievement: "Spent the week refining the architecture and mapping future product flows.",
+        commentary: "Noah brought a roadmap to a results fight. Vaporware with excellent formatting.",
+        evidenceType: "deployment",
+        evidenceLabel: "No production proof attached",
+        submittedAt: "Sun 11:41 PM"
+      }
+    ]
+  },
+  {
+    weekId: 1,
+    label: "Week 1 · First blood",
+    pot: 400,
+    winnerId: "noah",
+    winnerPayout: 280,
+    entries: [
+      {
+        playerId: "noah",
+        rank: 1,
+        points: 100,
+        achievement: "Signed the first paying client for the software product and collected the opening invoice.",
+        commentary: "A cash outcome from a cold start. Noah established the baseline everyone else now has to beat.",
+        evidenceType: "revenue",
+        evidenceLabel: "Stripe payment receipt",
+        submittedAt: "Sun 7:12 PM"
+      },
+      {
+        playerId: "james",
+        rank: 2,
+        points: 75,
+        achievement: "Launched the paid funnel and collected the first 240 qualified leads.",
+        commentary: "Strong asset creation with measurable demand. The funnel compounds, but no sale cleared yet.",
+        evidenceType: "analytics",
+        evidenceLabel: "Funnel conversion dashboard",
+        submittedAt: "Sun 8:06 PM"
+      },
+      {
+        playerId: "angus",
+        rank: 3,
+        points: 50,
+        achievement: "Delivered the campaign asset pack and received a signed client testimonial.",
+        commentary: "Professional delivery, but maintenance work needs a revenue consequence to dominate.",
+        evidenceType: "contract",
+        evidenceLabel: "Client delivery confirmation",
+        submittedAt: "Sun 9:22 PM"
+      },
+      {
+        playerId: "ollie",
+        rank: 4,
+        points: 25,
+        achievement: "Built a private product prototype with a working onboarding flow.",
+        commentary: "A functioning prototype beats a blank canvas, but there is no user or cash signal yet.",
+        evidenceType: "deployment",
+        evidenceLabel: "Prototype preview capture",
+        submittedAt: "Sun 10:02 PM"
+      },
+      {
+        playerId: "jett",
+        rank: 5,
+        points: 0,
+        achievement: "Reposted content and planned a new member challenge for next week.",
+        commentary: "Planning is not membership growth. The Forge records outcomes, not intentions.",
+        evidenceType: "members",
+        evidenceLabel: "No paid member delta attached",
+        submittedAt: "Sun 11:53 PM"
+      }
+    ]
+  }
+];
+
+export const walletTransactions: WalletTransaction[] = [
+  { id: "wallet-week-2", label: "Week 2 winner payout", detail: "Stripe transfer · James champion ledger", amount: 350, direction: "credit", status: "settled", time: "Mon 8:04 AM" },
+  { id: "wallet-week-3-ante", label: "Week 3 base ante", detail: "Card authorization held in weekly pot", amount: 50, direction: "debit", status: "held", time: "Mon 9:00 AM" },
+  { id: "wallet-week-2-fee", label: "Stripe processing fee", detail: "2.9% + $0.30 estimated settlement fee", amount: 10.45, direction: "debit", status: "settled", time: "Mon 8:05 AM" },
+  { id: "wallet-week-1-payout", label: "Week 1 payout", detail: "Champion payout after Vulture tax", amount: 280, direction: "credit", status: "settled", time: "Mon 8:03 AM" },
+  { id: "wallet-vulture", label: "Vulture Vault contribution", detail: "30% slump-week seizure routed to vault", amount: 120, direction: "debit", status: "settled", time: "Mon 8:02 AM" },
+  { id: "wallet-hold-release", label: "Unmatched raise released", detail: "James Week 3 raise hold returned", amount: 150, direction: "credit", status: "released", time: "Thu 4:00 PM" }
 ];
 
 export const activityFeed: ActivityEvent[] = [

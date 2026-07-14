@@ -45,6 +45,16 @@
 - [ ] Show winner payout separately from gross weekly pot.
 - [ ] Add mock Stripe/hold status labels without real payment execution.
 
+## Ledger, archive, and wallet history
+
+- [x] Replace the Members route with The Ledger.
+- [x] Add Monthly Season standings with cumulative points and winner history.
+- [x] Add settled-week Archive browsing with accordion entries.
+- [x] Show archived achievement text, AI commentary, and verification previews.
+- [x] Add BS Vote audit interaction with a pulsing Arena warning banner.
+- [x] Add normal-page Wallet History route with credits, debits, holds, and fees.
+- [x] Keep active-week standings and submission text hidden while browsing the Ledger.
+
 ## Weekly state machine
 
 - [x] Add global weekly stage state: active, submission, lockout, reveal.
