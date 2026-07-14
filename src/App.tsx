@@ -32,8 +32,8 @@ import {
   type Player
 } from "./data";
 
-type MainView = "arena" | "inbox";
-type AppTab = "week" | "members" | "account";
+type MainView = "arena" | "inbox" | "stakes" | "profile";
+type AppTab = "week" | "members" | "stakes" | "account";
 
 function nextSundayPrompt(now: Date) {
   const target = new Date(now);
@@ -64,7 +64,6 @@ export function App() {
   const [view, setView] = useState<MainView>("arena");
   const [activeTab, setActiveTab] = useState<AppTab>("week");
   const [submission, setSubmission] = useState("");
-  const [showStakes, setShowStakes] = useState(false);
   const [showVault, setShowVault] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [inboxItems, setInboxItems] = useState<NotificationItem[]>(notifications);
@@ -133,7 +132,8 @@ export function App() {
             countdown={countdown}
             onOpenStakes={() => {
               haptic(10);
-              setShowStakes(true);
+              setActiveTab("stakes");
+              setView("stakes");
             }}
             onOpenVault={() => setShowVault(true)}
             onOpenSettings={() => setShowSettings(true)}
@@ -143,8 +143,16 @@ export function App() {
           <MembersView players={players} onBackToWeek={() => setActiveTab("week")} />
         )}
         {view === "arena" && activeTab === "account" && (
-          <AccountView onOpenSettings={() => setShowSettings(true)} />
+          <AccountView
+            onOpenSettings={() => setShowSettings(true)}
+            onOpenProfileEdit={() => {
+              setActiveTab("account");
+              setView("profile");
+            }}
+          />
         )}
+        {view === "stakes" && <StakesPage onClose={() => { setActiveTab("week"); setView("arena"); }} />}
+        {view === "profile" && <ProfileEditView onBack={() => setView("arena")} />}
         {view === "inbox" && (
           <Inbox
             items={inboxItems}
@@ -156,28 +164,28 @@ export function App() {
             }}
           />
         )}
-        {view === "arena" && (
+        {(view === "arena" || view === "stakes" || view === "profile") && (
           <ActiveBottomNav
-            activeTab={activeTab}
+            activeTab={view === "stakes" ? "stakes" : view === "profile" ? "account" : activeTab}
             onSelect={(tab) => {
-              if (tab === "stakes") {
-                haptic(10);
-                setShowStakes(true);
-                return;
-              }
               haptic(8);
+              setView(tab === "stakes" ? "stakes" : "arena");
               setActiveTab(tab);
             }}
           />
         )}
       </section>
 
-      {showStakes && <StakesSheet onClose={() => setShowStakes(false)} />}
       {showVault && <VaultSheet onClose={() => setShowVault(false)} />}
       {showSettings && (
         <SettingsSheet
           unreadCount={inboxItems.filter((item) => item.unread).length}
           onClose={() => setShowSettings(false)}
+          onProfile={() => {
+            setShowSettings(false);
+            setActiveTab("account");
+            setView("profile");
+          }}
           onInbox={() => {
             setShowSettings(false);
             setView("inbox");
@@ -330,7 +338,7 @@ function MembersView({ players, onBackToWeek }: { players: Player[]; onBackToWee
   );
 }
 
-function AccountView({ onOpenSettings }: { onOpenSettings: () => void }) {
+function AccountView({ onOpenSettings, onOpenProfileEdit }: { onOpenSettings: () => void; onOpenProfileEdit: () => void }) {
   return (
     <div className="view account-view">
       <header className="secondary-header">
@@ -344,7 +352,7 @@ function AccountView({ onOpenSettings }: { onOpenSettings: () => void }) {
         <div className="profile-grid"><span>Focus<strong>Software launches</strong></span><span>Lifetime balance<strong>${players.find((player) => player.id === "noah")?.lifetimeBalance ?? 0}</strong></span><span>Member ID<strong>FORGE-042</strong></span><span>Current form<strong className="down-copy">▼ Drift</strong></span></div>
       </section>
       <div className="account-actions"><button><WalletCards size={16} /> Wallet history <ChevronRight size={15} /></button><button><Medal size={16} /> Career Hall of Fame <ChevronRight size={15} /></button><button><Bell size={16} /> Notifications <ChevronRight size={15} /></button></div>
-      <button className="account-edit-button" onClick={onOpenSettings}>Edit profile <ChevronRight size={15} /></button>
+      <button className="account-edit-button" onClick={onOpenProfileEdit}>Edit profile <ChevronRight size={15} /></button>
     </div>
   );
 }
@@ -389,7 +397,7 @@ function BlindPlayerCard({ player, secured = false }: { player: Player; secured?
   );
 }
 
-function StakesSheet({ onClose }: { onClose: () => void }) {
+function StakesPage({ onClose }: { onClose: () => void }) {
   const [raise, setRaise] = useState(50);
   const [nukeState, setNukeState] = useState<"idle" | "arming" | "confirmed">("idle");
   const holdTimer = useRef<number | undefined>(undefined);
@@ -413,17 +421,13 @@ function StakesSheet({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="sheet-backdrop stakes-backdrop">
-      <section className="stakes-sheet" role="dialog" aria-modal="true" aria-labelledby="stakes-title">
-        <div className="sheet-handle" />
+    <div className="view stakes-view">
         <header className="sheet-topline">
           <div>
             <p className="eyebrow">Mid-week action · Week {forgeState.weekId}</p>
             <h2 id="stakes-title">Stakes Room</h2>
           </div>
-          <button className="icon-button" onClick={onClose} aria-label="Close Stakes Room">
-            <X size={18} />
-          </button>
+          <button className="icon-button" onClick={onClose} aria-label="Close Stakes Room"><X size={18} /></button>
         </header>
 
         <section className="payout-estimate">
@@ -469,7 +473,26 @@ function StakesSheet({ onClose }: { onClose: () => void }) {
           <button className="cancel-link" onClick={onClose}>Cancel and Return</button>
           <span className="hold-caption">Hold continuously for 2 seconds to lock</span>
         </div>
-      </section>
+    </div>
+  );
+}
+
+function ProfileEditView({ onBack }: { onBack: () => void }) {
+  const [saved, setSaved] = useState(false);
+
+  return (
+    <div className="view profile-edit-view">
+      <CompactHeader eyebrow="Account management" title="Edit profile" onBack={onBack} />
+      <div className="profile-edit-form">
+        <label>Display name<input defaultValue="Noah" onChange={() => setSaved(false)} /></label>
+        <label>Role<input defaultValue="Software Developer" onChange={() => setSaved(false)} /></label>
+        <label>Primary focus<input defaultValue="Software launches" onChange={() => setSaved(false)} /></label>
+        <label>Monthly baseline<input defaultValue="$0" onChange={() => setSaved(false)} /></label>
+        <p><LockKeyhole size={14} /> Profile context is used to judge outcomes relative to your operating baseline.</p>
+      </div>
+      <button className={`profile-save-button ${saved ? "saved" : ""}`} onClick={() => { haptic([15, 30, 15]); setSaved(true); }}>
+        {saved ? <><Check size={18} /> Profile Saved</> : <>Save Profile <ChevronRight size={17} /></>}
+      </button>
     </div>
   );
 }
@@ -688,10 +711,12 @@ function VaultSheet({ onClose }: { onClose: () => void }) {
 function SettingsSheet({
   unreadCount,
   onClose,
+  onProfile,
   onInbox
 }: {
   unreadCount: number;
   onClose: () => void;
+  onProfile: () => void;
   onInbox: () => void;
 }) {
   return (

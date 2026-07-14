@@ -2249,6 +2249,107 @@ h3 {
 .settings-row > svg:first-child { color: var(--forge-champagne); }
 .sheet-action { color: #111; background: var(--forge-money); }
 
+.stakes-view {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  gap: 14px;
+}
+
+.stakes-view .sheet-topline {
+  min-height: 61px;
+  align-items: center;
+}
+
+.stakes-view .sheet-topline h2 {
+  margin: 4px 0 0;
+  font-size: 25px;
+}
+
+.stakes-view .payout-estimate {
+  margin-top: 0;
+}
+
+.stakes-view .bet-slider-panel {
+  padding: 18px 3px;
+}
+
+.stakes-view .nuke-zone {
+  padding-bottom: 2px;
+}
+
+.profile-edit-view {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 14px;
+}
+
+.profile-edit-form {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+}
+
+.profile-edit-form label {
+  display: grid;
+  gap: 6px;
+  color: rgba(236, 232, 221, 0.44);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.profile-edit-form input {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid rgba(185, 170, 136, 0.18);
+  border-radius: 12px;
+  color: #e6dfd0;
+  background: rgba(255, 255, 255, 0.045);
+  font: inherit;
+  font-size: 13px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.profile-edit-form input:focus {
+  border-color: rgba(185, 170, 136, 0.62);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(185, 170, 136, 0.08);
+}
+
+.profile-edit-form p {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 5px 0 0;
+  color: rgba(236, 232, 221, 0.34);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.profile-edit-form p svg { flex: 0 0 auto; color: var(--forge-champagne); }
+
+.profile-save-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 50px;
+  border: 0;
+  border-radius: 14px;
+  color: #101210;
+  background: var(--forge-money);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.profile-save-button.saved {
+  color: #101210;
+  background: var(--forge-champagne);
+}
+
 @keyframes metallicAura {
   0%, 100% { box-shadow: 0 0 34px rgba(185,170,136,0.06), inset 0 1px rgba(255,255,255,0.06); }
   50% { box-shadow: 0 0 50px rgba(185,170,136,0.12), inset 0 1px rgba(255,255,255,0.1); }
