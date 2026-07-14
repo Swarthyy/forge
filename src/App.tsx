@@ -218,7 +218,7 @@ export function App() {
         />
       )}
 
-      {selectedNotification && (
+      {selectedNotification && view !== "alerts" && (
         <div className="sheet-backdrop" onClick={() => setSelectedNotification(null)}>
           <section
             className="detail-sheet"
@@ -383,7 +383,16 @@ function AlertPanel({ items, unreadCount, selectedNotification, onClose, onClear
       <section className="alert-page-card" aria-labelledby="alert-panel-title">
         <header className="alert-panel-header"><div><p className="eyebrow">Economic event stream</p><h2 id="alert-panel-title">High-stakes alerts</h2><span>{unreadCount} unread triggers</span></div><button className="icon-button" onClick={onClose} aria-label="Close high-stakes alerts"><X size={18} /></button></header>
         <div className="alert-panel-actions"><span>Raises · audits · Vulture tax</span><button className="text-button" onClick={onMarkAllRead}>Mark all read</button></div>
-        <div className="alert-panel-list">{items.map((item) => <button key={item.id} className={`alert-panel-item ${item.unread ? "unread" : ""}`} onClick={() => onOpen(item)}><span className={`notification-severity ${item.severity}`} /><span><small>{item.category} · {item.time}</small><strong>{item.title}</strong><em>{item.body}</em></span>{item.unread && <i />}<ChevronRight size={15} /></button>)}</div>
+        {selectedNotification ? (
+          <section className="alert-detail-card" aria-labelledby="notification-detail-title">
+            <div className="alert-detail-topline"><span className={`category-label ${selectedNotification.severity}`}>{selectedNotification.category}</span><button className="text-button" onClick={onClearSelection}>Back to alerts</button></div>
+            <h3 id="notification-detail-title">{selectedNotification.title}</h3>
+            <p>{selectedNotification.body}</p>
+            <span>Received {selectedNotification.time}</span>
+          </section>
+        ) : (
+          <div className="alert-panel-list">{items.map((item) => <button key={item.id} className={`alert-panel-item ${item.unread ? "unread" : ""}`} onClick={() => onOpen(item)}><span className={`notification-severity ${item.severity}`} /><span><small>{item.category} · {item.time}</small><strong>{item.title}</strong><em>{item.body}</em></span>{item.unread && <i />}<ChevronRight size={15} /></button>)}</div>
+        )}
       </section>
     </div>
   );
